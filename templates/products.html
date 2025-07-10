@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">จัดการสินค้า</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+      <a href="{{ url_for('main.add_product') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-circle me-2"></i>เพิ่มสินค้าใหม่</a>
+  </div>
+</div>
+<div class="row">
+  {% for product in products %}
+  <div class="col-md-3 mb-4">
+      <div class="card product-card">
+          {% if product.image_path %}
+          <img src="{{ url_for('static', filename=product.image_path.replace('\\', '/')) }}" class="card-img-top" alt="{{ product.name }} {{ product.flavor }}" 
+     onerror="this.onerror=null; this.src='data:image/svg+xml;charset=UTF-8,%3Csvg width=\'100%\' height=\'180\' xmlns=\'http://www.w3.org/2000/svg\' role=\'img\' aria-label=\'Placeholder\' preserveAspectRatio=\'xMidYMid slice\' focusable=\'false\'%3E%3Crect width=\'100%\' height=\'100%\' fill=\'%236c757d\'/%3E%3Ctext x=\'50%\' y=\'50%\' fill=\'%23dee2e6\' dy=\'.3em\' text-anchor=\'middle\'%3E{{ product.name }} {{ product.flavor }}%3C/text%3E%3C/svg%3E';">
+          {% else %}
+          <svg class="bd-placeholder-img card-img-top" width="100%" height="180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder" preserveAspectRatio="xMidYMid slice" focusable="false">
+              <title>{{ product.name }} {{ product.flavor }}</title>
+              <rect width="100%" height="100%" fill="#6c757d"/><text x="50%" y="50%" fill="#dee2e6" dy=".3em" text-anchor="middle">{{ product.name }} {{ product.flavor }}</text>
+          </svg>
+          {% endif %}
+          <div class="card-body">
+              <h5 class="card-title">{{ product.flavor }}</h5>
+              <p class="card-text">{{ product.name }}</p>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-primary fw-bold">฿{{ '{:,.2f}'.format(product.price) }}</span>
+                  <span class="text-muted">ต้นทุน: ฿{{ '{:,.2f}'.format(product.cost) }}</span>
+              </div>
+              {% if product.wholesale_price %}
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-success">ขายส่ง: ฿{{ '{:,.2f}'.format(product.wholesale_price) }}</span>
+                  <span class="text-info">กำไร: ฿{{ '{:,.2f}'.format(product.price - product.cost) }}</span>
+              </div>
+              {% endif %}
+              <div class="d-flex justify-content-between align-items-center">
+                  <span class="badge {% if product.stock < 10 %}bg-danger{% elif product.stock < 20 %}bg-warning{% else %}bg-success{% endif %}">สต็อก: {{ product.stock }} ชิ้น</span>
+                  <div class="btn-group">
+                      <a href="{{ url_for('main.edit_product', id=product.id) }}" class="btn btn-sm btn-outline-secondary">แก้ไข</a>
+                      <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ product.id }}">ลบ</button>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+  <div class="modal fade" id="deleteModal{{ product.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ product.id }}" aria-hidden="true">
+      <div class="modal-dialog">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title" id="deleteModalLabel{{ product.id }}">ยืนยันการลบสินค้า</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">คุณแน่ใจหรือไม่ที่ต้องการลบสินค้า "{{ product.name }} {{ product.flavor }}"?</div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                  <form action="{{ url_for('main.delete_product', id=product.id) }}" method="POST">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                      <button type="submit" class="btn btn-danger">ลบสินค้า</button>
+                  </form>
+              </div>
+          </div>
+      </div>
+  </div>
+  {% else %}
+  <div class="col-12"><div class="alert alert-info">ยังไม่มีสินค้าในระบบ กรุณาเพิ่มสินค้าใหม่</div></div>
+  {% endfor %}
+</div>
+{% endblock %}
+

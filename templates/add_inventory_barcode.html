@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">เพิ่มสต็อกด้วยบาร์โค้ด</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+      <a href="{{ url_for('main.inventory') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>กลับไปยังสต็อกสินค้า</a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-upc-scan me-2"></i>สแกนบาร์โค้ด</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div id="scanner-container" class="mb-3">
+            <div id="scanner-placeholder" class="border rounded d-flex align-items-center justify-content-center" style="height: 300px; background-color: #f8f9fa;">
+              <div class="text-center">
+                <i class="bi bi-camera text-muted" style="font-size: 3rem;"></i>
+                <p class="mt-2">คลิกที่นี่เพื่อเริ่มสแกน</p>
+              </div>
+            </div>
+            <div id="scanner" style="display: none;"></div>
+          </div>
+          <div class="d-grid gap-2">
+            <button id="start-scanner" class="btn btn-primary">
+              <i class="bi bi-camera me-2"></i>เริ่มสแกน
+            </button>
+            <button id="stop-scanner" class="btn btn-secondary" style="display: none;">
+              <i class="bi bi-stop-circle me-2"></i>หยุดสแกน
+            </button>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="barcode-input" class="form-label">หรือป้อนบาร์โค้ดด้วยตนเอง</label>
+          <div class="input-group">
+            <input type="text" class="form-control" id="barcode-input" placeholder="กรอกบาร์โค้ด">
+            <button class="btn btn-outline-secondary" type="button" id="search-barcode">ค้นหา</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>ข้อมูลสินค้า</h5>
+      </div>
+      <div class="card-body">
+        <div id="product-not-found" class="alert alert-warning" style="display: none;">
+          <i class="bi bi-exclamation-triangle me-2"></i>ไม่พบสินค้าที่มีบาร์โค้ดนี้
+        </div>
+        <form id="inventory-form" method="POST" action="{{ url_for('main.add_inventory') }}" style="display: none;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <input type="hidden" id="product_id" name="product_id"> <!-- Added hidden product_id field -->
+          <div class="mb-3">
+            <label for="name" class="form-label">ชื่อสินค้า</label>
+            <input type="text" class="form-control" id="name" name="name" readonly>
+          </div>
+          <div class="mb-3">
+            <label for="flavor" class="form-label">รสชาติ</label>
+            <input type="text" class="form-control" id="flavor" name="flavor" readonly>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="price" class="form-label">ราคาขาย (บาท)</label>
+              <input type="text" class="form-control" id="price" readonly>
+            </div>
+            <div class="col-md-6">
+              <label for="current-stock" class="form-label">สต็อกปัจจุบัน</label>
+              <input type="text" class="form-control" id="current-stock" readonly>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="quantity" class="form-label">จำนวนที่เพิ่ม</label>
+            <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
+          </div>
+          <div class="mb-3">
+            <label for="barcode" class="form-label">บาร์โค้ด</label>
+            <input type="text" class="form-control" id="barcode" name="barcode" readonly>
+          </div>
+          <div class="mb-3">
+            <label for="notes" class="form-label">หมายเหตุ</label>
+            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">บันทึกการเพิ่มสต็อก</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const startScannerBtn = document.getElementById('start-scanner');
+  const stopScannerBtn = document.getElementById('stop-scanner');
+  const scannerPlaceholder = document.getElementById('scanner-placeholder');
+  const scannerContainer = document.getElementById('scanner');
+  const barcodeInput = document.getElementById('barcode-input');
+  const searchBarcodeBtn = document.getElementById('search-barcode');
+  const productNotFound = document.getElementById('product-not-found');
+  const inventoryForm = document.getElementById('inventory-form');
+  
+  let quaggaInitialized = false;
+  
+  // Start scanner
+  startScannerBtn.addEventListener('click', function() {
+    scannerPlaceholder.style.display = 'none';
+    scannerContainer.style.display = 'block';
+    startScannerBtn.style.display = 'none';
+    stopScannerBtn.style.display = 'block';
+    
+    initQuagga();
+  });
+  
+  // Stop scanner
+  stopScannerBtn.addEventListener('click', function() {
+    if (quaggaInitialized) {
+      Quagga.stop();
+      quaggaInitialized = false;
+    }
+    
+    scannerContainer.style.display = 'none';
+    scannerPlaceholder.style.display = 'flex';
+    stopScannerBtn.style.display = 'none';
+    startScannerBtn.style.display = 'block';
+  });
+  
+  // Search barcode manually
+  searchBarcodeBtn.addEventListener('click', function() {
+    const barcode = barcodeInput.value.trim();
+    if (barcode) {
+      searchProduct(barcode);
+    }
+  });
+  
+  // Handle barcode input enter key
+  barcodeInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const barcode = barcodeInput.value.trim();
+      if (barcode) {
+        searchProduct(barcode);
+      }
+    }
+  });
+  
+  // Initialize Quagga barcode scanner
+  function initQuagga() {
+    if (quaggaInitialized) {
+      return;
+    }
+    
+    Quagga.init({
+      inputStream: {
+        name: "Live",
+        type: "LiveStream",
+        target: scannerContainer,
+        constraints: {
+          width: 480,
+          height: 320,
+          facingMode: "environment"
+        },
+      },
+      decoder: {
+        readers: [
+          "code_128_reader",
+          "ean_reader",
+          "ean_8_reader",
+          "code_39_reader",
+          "code_39_vin_reader",
+          "codabar_reader",
+          "upc_reader",
+          "upc_e_reader",
+          "i2of5_reader"
+        ],
+        debug: {
+          showCanvas: true,
+          showPatches: true,
+          showFoundPatches: true,
+          showSkeleton: true,
+          showLabels: true,
+          showPatchLabels: true,
+          showRemainingPatchLabels: true,
+          boxFromPatches: {
+            showTransformed: true,
+            showTransformedBox: true,
+            showBB: true
+          }
+        }
+      },
+    }, function(err) {
+      if (err) {
+        console.error(err);
+        alert("���ม่สามารถเริ่มกล้องได้: " + err);
+        stopScannerBtn.click();
+        return;
+      }
+      
+      quaggaInitialized = true;
+      Quagga.start();
+    });
+    
+    // When a barcode is detected
+    Quagga.onDetected(function(result) {
+      const code = result.codeResult.code;
+      barcodeInput.value = code;
+      
+      // Stop scanner after successful detection
+      stopScannerBtn.click();
+      
+      // Search for the product
+      searchProduct(code);
+    });
+  }
+  
+  // Search for product by barcode
+  function searchProduct(barcode) {
+    fetch('/api/scan_barcode', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ barcode: barcode }),
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.found) {
+        // Product found, populate form
+        document.getElementById('name').value = data.product.name;
+        document.getElementById('flavor').value = data.product.flavor;
+        document.getElementById('price').value = data.product.price;
+        document.getElementById('current-stock').value = data.product.stock;
+        document.getElementById('barcode').value = barcode;
+        document.getElementById('product_id').value = data.product.id; // Set the hidden product_id
+        document.getElementById('quantity').disabled = false; // Enable quantity input
+        
+        // Show form, hide not found message
+        inventoryForm.style.display = 'block';
+        productNotFound.style.display = 'none';
+      } else {
+        // Product not found
+        inventoryForm.style.display = 'none';
+        productNotFound.style.display = 'block';
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('เกิดข้อผิดพลาดในการค้นหาสินค้า');
+    });
+  }
+});
+</script>
+{% endblock %}

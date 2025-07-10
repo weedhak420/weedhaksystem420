@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+{% block page_title %}การวิเคราะห์กำไร{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">การวิเคราะห์กำไร</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('main.reports') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>กลับไปยังรายงาน
+        </a>
+        <button type="button" class="btn btn-sm btn-success ms-2" onclick="exportToExcel()">
+            <i class="bi bi-file-earmark-excel me-2"></i>ส่งออก Excel
+        </button>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">฿{{ "%.2f"|format(total_value) }}</h5>
+                <p class="card-text">มูลค่าสินค้าคงคลัง</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <h5 class="card-title">฿{{ "%.2f"|format(total_cost) }}</h5>
+                <p class="card-text">ต้นทุนรวม</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">฿{{ "%.2f"|format(total_profit_potential) }}</h5>
+                <p class="card-text">กำไรที่คาดหวัง</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <h5 class="card-title">{{ "%.1f"|format((total_profit_potential / total_value * 100) if total_value > 0 else 0) }}%</h5>
+                <p class="card-text">อัตรากำไรเฉลี่ย</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">แนวโน้มกำไรรายเดือน</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="profitTrendChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">สัดส่วนต้นทุนและกำไร</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="costProfitChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Products by Margin -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">สินค้าที่มีอัตรากำไรสูงสุด</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm" id="topMarginTable">
+                        <thead>
+                            <tr>
+                                <th>สินค้า</th>
+                                <th class="text-end">ราคาขาย</th>
+                                <th class="text-end">ต้นทุน</th>
+                                <th class="text-end">อัตรากำไร</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in top_products_by_margin %}
+                            <tr>
+                                <td>{{ product.name }} ({{ product.flavor }})</td>
+                                <td class="text-end">฿{{ "%.2f"|format(product.price) }}</td>
+                                <td class="text-end">฿{{ "%.2f"|format(product.cost) }}</td>
+                                <td class="text-end text-success">{{ "%.1f"|format(product.profit_margin) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">สินค้าที่มีกำไรรวมสูงสุด</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm" id="topProfitTable">
+                        <thead>
+                            <tr>
+                                <th>สินค้า</th>
+                                <th class="text-end">จำนวนคงเหลือ</th>
+                                <th class="text-end">กำไรต่อชิ้น</th>
+                                <th class="text-end">กำไรรวม</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in top_products_by_total_profit %}
+                            <tr>
+                                <td>{{ product.name }} ({{ product.flavor }})</td>
+                                <td class="text-end">{{ product.stock }}</td>
+                                <td class="text-end">฿{{ "%.2f"|format(product.price - product.cost) }}</td>
+                                <td class="text-end text-success">฿{{ "%.2f"|format(product.total_profit) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sample Product Analysis -->
+{% if sample_product %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">ตัวอย่างการวิเคราะห์สินค้า: {{ sample_product.name }} ({{ sample_product.flavor }})</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h6>ราคาขาย</h6>
+                    <h4 class="text-primary">฿{{ "%.2f"|format(sample_product.price) }}</h4>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h6>ต้นทุน</h6>
+                    <h4 class="text-warning">฿{{ "%.2f"|format(sample_product.cost) }}</h4>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h6>กำไรต่อชิ้น</h6>
+                    <h4 class="text-success">฿{{ "%.2f"|format(sample_product.profit) }}</h4>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h6>อัตรากำไร</h6>
+                    <h4 class="text-info">{{ "%.1f"|format(sample_product.profit_percentage) }}%</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- All Products Analysis -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">การวิเคราะห์กำไรทุกสินค้า</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped" id="allProductsTable">
+                <thead>
+                    <tr>
+                        <th>สินค้า</th>
+                        <th class="text-end">ราคาขาย</th>
+                        <th class="text-end">ต้นทุน</th>
+                        <th class="text-end">กำไรต่อชิ้น</th>
+                        <th class="text-end">อัตรากำไร</th>
+                        <th class="text-end">จำนวนคงเหลือ</th>
+                        <th class="text-end">กำไรรวม</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    {% set profit_per_unit = product.price - product.cost %}
+                    {% set profit_margin = (profit_per_unit / product.price * 100) if product.price > 0 else 0 %}
+                    {% set total_profit = profit_per_unit * product.stock %}
+                    <tr>
+                        <td>{{ product.name }} ({{ product.flavor }})</td>
+                        <td class="text-end">฿{{ "%.2f"|format(product.price) }}</td>
+                        <td class="text-end">฿{{ "%.2f"|format(product.cost) }}</td>
+                        <td class="text-end {% if profit_per_unit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            ฿{{ "%.2f"|format(profit_per_unit) }}
+                        </td>
+                        <td class="text-end {% if profit_margin >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ "%.1f"|format(profit_margin) }}%
+                        </td>
+                        <td class="text-end">{{ product.stock }}</td>
+                        <td class="text-end {% if total_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            ฿{{ "%.2f"|format(total_profit) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Profit Trend Chart
+    const months = {{ months | tojson }};
+    const revenueData = {{ revenue_data | tojson }};
+    const costData = {{ cost_data | tojson }};
+    const profitData = {{ profit_data | tojson }};
+    
+    const trendCtx = document.getElementById('profitTrendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'รายได้',
+                data: revenueData,
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                tension: 0.3
+            }, {
+                label: 'ต้นทุน',
+                data: costData,
+                borderColor: '#f6c23e',
+                backgroundColor: 'rgba(246, 194, 62, 0.1)',
+                tension: 0.3
+            }, {
+                label: 'กำไร',
+                data: profitData,
+                borderColor: '#1cc88a',
+                backgroundColor: 'rgba(28, 200, 138, 0.1)',
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '฿' + value.toLocaleString('th-TH');
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ฿' + context.raw.toLocaleString('th-TH', {minimumFractionDigits: 2});
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Cost vs Profit Pie Chart
+    const totalCost = {{ total_cost | tojson }};
+    const totalProfit = {{ total_profit_potential | tojson }};
+    
+    const pieCtx = document.getElementById('costProfitChart').getContext('2d');
+    new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['ต้นทุน', 'กำไรที่คาดหวัง'],
+            datasets: [{
+                data: [totalCost, totalProfit],
+                backgroundColor: ['#f6c23e', '#1cc88a'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.raw / total) * 100).toFixed(1);
+                            return context.label + ': ฿' + context.raw.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+
+function exportToExcel() {
+    const wb = XLSX.utils.book_new();
+    
+    // Export top margin products
+    const marginTable = document.getElementById('topMarginTable');
+    const marginWs = XLSX.utils.table_to_sheet(marginTable);
+    XLSX.utils.book_append_sheet(wb, marginWs, "สินค้าอัตรากำไรสูง");
+    
+    // Export top profit products
+    const profitTable = document.getElementById('topProfitTable');
+    const profitWs = XLSX.utils.table_to_sheet(profitTable);
+    XLSX.utils.book_append_sheet(wb, profitWs, "สินค้ากำไรรวมสูง");
+    
+    // Export all products
+    const allTable = document.getElementById('allProductsTable');
+    const allWs = XLSX.utils.table_to_sheet(allTable);
+    XLSX.utils.book_append_sheet(wb, allWs, "การวิเคราะห์ทุกสินค้า");
+    
+    // Save file
+    const filename = `การวิเคราะห์กำไร_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+}
+</script>
+{% endblock %}

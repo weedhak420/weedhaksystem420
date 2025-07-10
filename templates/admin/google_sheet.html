@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Google Sheets Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-table"></i>
+                        Google Sheets Integration Management
+                    </h3>
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Status Overview -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card {% if status.enabled %}border-success{% else %}border-danger{% endif %}">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-info-circle"></i>
+                                        Integration Status
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Status:</strong> 
+                                        {% if status.enabled %}
+                                            <span class="badge badge-success">Enabled</span>
+                                        {% else %}
+                                            <span class="badge badge-danger">Disabled</span>
+                                        {% endif %}
+                                    </p>
+                                    <p><strong>Error Count:</strong> {{ status.error_count }}</p>
+                                    <p><strong>Last Success:</strong> 
+                                        {% if status.last_success %}
+                                            {{ status.last_success }}
+                                        {% else %}
+                                            <span class="text-muted">Never</span>
+                                        {% endif %}
+                                    </p>
+                                    {% if status.last_error %}
+                                    <p><strong>Last Error:</strong> 
+                                        <span class="text-danger">{{ status.last_error }}</span>
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card {% if test_result.success %}border-success{% else %}border-warning{% endif %}">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-plug"></i>
+                                        Connection Test
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Connection:</strong> 
+                                        {% if test_result.success %}
+                                            <span class="badge badge-success">Success</span>
+                                        {% else %}
+                                            <span class="badge badge-danger">Failed</span>
+                                        {% endif %}
+                                    </p>
+                                    <p><strong>Message:</strong> {{ test_result.message }}</p>
+                                    
+                                    {% if test_result.success and test_result.details %}
+                                    <p><strong>Spreadsheet:</strong> {{ test_result.details.spreadsheet_title }}</p>
+                                    <p><strong>Sheets:</strong> {{ test_result.details.sheet_count }}</p>
+                                    <p><strong>Available Sheets:</strong> 
+                                        {% for sheet in test_result.details.sheets %}
+                                            <span class="badge badge-info">{{ sheet }}</span>
+                                        {% endfor %}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Troubleshooting -->
+                    {% if test_result.suggestions %}
+                    <div class="alert alert-warning">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Troubleshooting Suggestions</h5>
+                        <ul class="mb-0">
+                            {% for suggestion in test_result.suggestions %}
+                            <li>{{ suggestion }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h5>Management Actions</h5>
+                            <div class="btn-group mb-3" role="group">
+                                <form method="POST" action="{{ url_for('admin.test_google_sheets') }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-check-circle"></i>
+                                        Test Connection
+                                    </button>
+                                </form>
+                                
+                                <form method="POST" action="{{ url_for('admin.setup_sheets_structure') }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-info">
+                                        <i class="fas fa-cogs"></i>
+                                        Setup Structure
+                                    </button>
+                                </form>
+                                
+                                <form method="POST" action="{{ url_for('admin.sync_products') }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-success" 
+                                            onclick="return confirm('This will sync all products to Google Sheets. Continue?')">
+                                        <i class="fas fa-sync"></i>
+                                        Sync All Products
+                                    </button>
+                                </form>
+                                
+                                <form method="POST" action="{{ url_for('admin.reset_google_sheets') }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-warning" 
+                                            onclick="return confirm('This will reset the integration status. Continue?')">
+                                        <i class="fas fa-redo"></i>
+                                        Reset Status
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Configuration Info -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-cog"></i>
+                                Configuration Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Required Configuration</h6>
+                                    <ul>
+                                        <li><strong>GOOGLE_SHEETS_CREDENTIALS_FILE:</strong> Path to service account JSON file</li>
+                                        <li><strong>GOOGLE_SHEETS_SPREADSHEET_ID:</strong> Google Sheets spreadsheet ID</li>
+                                        <li><strong>Google Sheets API:</strong> Must be enabled in Google Cloud Console</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Service Account Permissions</h6>
+                                    <ul>
+                                        <li>Service account must have <strong>Editor</strong> permissions</li>
+                                        <li>Share the Google Sheet with the service account email</li>
+                                        <li>Ensure Google Sheets API is enabled</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh status every 30 seconds
+setInterval(function() {
+    fetch('{{ url_for("admin.google_sheets_status_api") }}')
+        .then(response => response.json())
+        .then(data => {
+            // Update status indicators
+            const statusBadge = document.querySelector('.badge');
+            if (data.status.enabled) {
+                statusBadge.className = 'badge badge-success';
+                statusBadge.textContent = 'Enabled';
+            } else {
+                statusBadge.className = 'badge badge-danger';
+                statusBadge.textContent = 'Disabled';
+            }
+            
+            // Update error count
+            document.querySelector('p:contains("Error Count:")').innerHTML = 
+                '<strong>Error Count:</strong> ' + data.status.error_count;
+        })
+        .catch(error => {
+            console.error('Error fetching status:', error);
+        });
+}, 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">โปรไฟล์ของฉัน</h1>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">ข้อมูลผู้ใช้</div>
+            <div class="card-body">
+                <p><strong>ชื่อผู้ใช้:</strong> {{ user.username }}</p>
+                <p><strong>ชื่อ-นามสกุล:</strong> {{ user.name or '-' }}</p>
+                <p><strong>บทบาท:</strong> 
+                    {% if user.role == 'admin' %}
+                    <span class="badge bg-danger">ผู้ดูแลระบบ</span>
+                    {% else %}
+                    <span class="badge bg-primary">พนักงาน</span>
+                    {% endif %}
+                </p>
+                <p><strong>วันที่สร้าง:</strong> {{ user.created_at.strftime('%d/%m/%Y') }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">เปลี่ยนรหัสผ่าน</div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="mb-3">
+                        <label for="current_password" class="form-label">รหัสผ่านปัจจุบัน</label>
+                        <input type="password" class="form-control" id="current_password" name="current_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">รหัสผ่านใหม่</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">ยืนยันรหัสผ่านใหม่</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">เปลี่ยนรหัสผ่าน</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

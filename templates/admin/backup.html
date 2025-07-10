@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+
+{% block page_title %}สำรองข้อมูล{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">สำรองข้อมูล</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>กลับไปยังแดชบอร์ด
+        </a>
+    </div>
+</div>
+
+{% if db_backup or excel_export %}
+<div class="alert alert-success">
+    <i class="bi bi-check-circle-fill me-2"></i>ดำเนินการสำรองข้อมูลเสร็จสิ้น
+</div>
+{% endif %}
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-download me-2"></i>ดาวน์โหลดไฟล์สำรองข้อมูล</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                {% if db_backup %}
+                <div class="card mb-3 border-primary">
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-database" style="font-size: 3rem; color: var(--primary-color);"></i>
+                        </div>
+                        <h5 class="card-title text-primary text-center">ไฟล์ฐานข้อมูล</h5>
+                        <p class="card-text text-center">
+                            {% if db_backup.endswith('.db') %}
+                            ไฟล์ฐานข้อมูล SQLite สำหรับการกู้คืนระบบ
+                            {% else %}
+                            ไฟล์ SQL Dump สำหรับการกู้คืนระบบ MySQL
+                            {% endif %}
+                        </p>
+                        <p class="text-muted small text-center">
+                            <i class="bi bi-info-circle me-1"></i>
+                            ใช้สำหรับการกู้คืนระบบทั้งหมด รวมถึงโครงสร้างฐานข้อมูลและข้อมูลทั้งหมด
+                        </p>
+                        <div class="d-grid">
+                            <a href="{{ url_for('main.download_backup', filename=db_backup) }}" class="btn btn-primary">
+                                <i class="bi bi-download me-2"></i>ดาวน์โหลดฐานข้อมูล
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card mb-3 border-warning">
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: var(--warning-color);"></i>
+                        </div>
+                        <h5 class="card-title text-warning text-center">ไฟล์ฐานข้อมูล</h5>
+                        <p class="card-text text-warning text-center">ไม่สามารถสำรองฐานข้อมูลได้</p>
+                        <div class="alert alert-warning small mb-3">
+                            <strong>สาเหตุที่เป็นไปได้:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>ไม่พบไฟล์ฐานข้อมูล SQLite</li>
+                                <li>ไม่มีสิทธิ์เข้าถึงไฟล์ฐานข้อมูล</li>
+                                <li>ประเภทฐานข้อมูลไม่รองรับการสำรองแบบไฟล์</li>
+                                <li>เกิดข้อผิดพลาดในระหว่างการสำรอง</li>
+                            </ul>
+                        </div>
+                        <div class="d-grid">
+                            <button class="btn btn-secondary" disabled>
+                                <i class="bi bi-x-circle me-2"></i>ไม่พร้อมใช้งาน
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                {% if excel_export %}
+                <div class="card border-success">
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-file-earmark-excel" style="font-size: 3rem; color: var(--success-color);"></i>
+                        </div>
+                        <h5 class="card-title text-success text-center">ไฟล์ Excel</h5>
+                        <p class="card-text text-center">ไฟล์ Excel สำหรับการวิเคราะห์ข้อมูล</p>
+                        <p class="text-muted small text-center">
+                            <i class="bi bi-info-circle me-1"></i>
+                            ใช้สำหรับการวิเคราะห์ข้อมูล การนำเข้าข้อมูลในระบบอื่น หรือการดูข้อมูลในรูปแบบตาราง
+                        </p>
+                        <div class="d-grid">
+                            <a href="{{ url_for('main.download_backup', filename=excel_export) }}" class="btn btn-success">
+                                <i class="bi bi-download me-2"></i>ดาวน์โหลด Excel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card border-warning">
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: var(--warning-color);"></i>
+                        </div>
+                        <h5 class="card-title text-warning text-center">ไฟล์ Excel</h5>
+                        <p class="card-text text-warning text-center">ไม่สามารถสร้างไฟล์ Excel ได้</p>
+                        <div class="alert alert-warning small mb-3">
+                            <strong>สาเหตุที่เป็นไปได้:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>ไม่สามารถเชื่อมต่อฐานข้อมูลได้</li>
+                                <li>ไม่มีสิทธิ์เขียนไฟล์ในโฟลเดอร์สำรอง</li>
+                                <li>ข้อมูลในตารางมีปัญหา</li>
+                                <li>หน่วยความจำไม่เพียงพอ</li>
+                            </ul>
+                        </div>
+                        <div class="d-grid">
+                            <button class="btn btn-secondary" disabled>
+                                <i class="bi bi-x-circle me-2"></i>ไม่พร้อมใช้งาน
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if not db_backup and not excel_export %}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="alert alert-danger text-center">
+                    <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
+                    <h5 class="mt-3">ไม่สามารถสำรองข้อมูลได้</h5>
+                    <p>เกิดข้อผิดพลาดในการสร้างไฟล์สำรองข้อมูล กรุณาตรวจสอบการตั้งค่าระบบและลองใหม่อีกครั้ง</p>
+                    <a href="{{ url_for('main.backup_data') }}" class="btn btn-danger">
+                        <i class="bi bi-arrow-repeat me-2"></i>ลองใหม่
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>คำแนะนำการสำรองข้อมูล</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <h6><strong>คำแนะนำสำหรับการสำรองข้อมูล:</strong></h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="mb-0">
+                        <li><strong>ไฟล์ฐานข้อมูล (.db/.sql):</strong> ใช้สำหรับการกู้คืนระบบทั้งหมด</li>
+                        <li><strong>ไฟล์ Excel (.xlsx):</strong> ใช้สำหรับการวิเคราะห์ข้อมูล</li>
+                        <li>ควรสำรองข้อมูลเป็นประจำทุกสัปดาห์หรือทุกเดือน</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="mb-0">
+                        <li>เก็บไฟล์สำรองข้อมูลไว้ในที่ปลอดภัย</li>
+                        <li>ทดสอบการกู้คืนข้อมูลเป็นระยะ</li>
+                        <li>แยกเก็บไฟล์สำรองจากเซิร์ฟเวอร์หลัก</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="bi bi-shield-check me-2"></i>การกู้คืนฐานข้อมูล</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text small">หากต้องการกู้คืนระบบ:</p>
+                        <div class="row">
+                            <div class="col-12">
+                                <strong>สำหรับ SQLite (.db):</strong>
+                                <ol class="small">
+                                    <li>หยุดการทำงานของระบบ</li>
+                                    <li>สำรองไฟล์ฐานข้อมูลปัจจุบัน</li>
+                                    <li>แทนที่ด้วยไฟล์สำรองที่ดาวน์โหลด</li>
+                                    <li>เริ่มระบบใหม่</li>
+                                </ol>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <strong>สำหรับ MySQL (.sql):</strong>
+                                <ol class="small">
+                                    <li>เข้าสู่ MySQL</li>
+                                    <li>สร้างฐานข้อมูลใหม่หรือล้างข้อมูลเก่า</li>
+                                    <li>รันไฟล์ SQL ที่ดาวน์โหลด</li>
+                                    <li>ตรวจสอบข้อมูล</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="bi bi-file-earmark-spreadsheet me-2"></i>การใช้งานไฟล์ Excel</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text small">ไฟล์ Excel ประกอบด้วยแผ่นงาน:</p>
+                        <div class="row">
+                            <div class="col-6">
+                                <ul class="small">
+                                    <li><strong>user:</strong> ข้อมูลผู้ใช้งาน</li>
+                                    <li><strong>customer:</strong> ข้อมูลลูกค้า</li>
+                                    <li><strong>product:</strong> ข้อมูลสินค้า</li>
+                                    <li><strong>order:</strong> ข้อมูลคำสั่งซื้อ</li>
+                                </ul>
+                            </div>
+                            <div class="col-6">
+                                <ul class="small">
+                                    <li><strong>order_item:</strong> รายการสินค้า</li>
+                                    <li><strong>inventory_entry:</strong> ประวัติสต็อก</li>
+                                    <li><strong>activity_log:</strong> บันทึกกิจกรรม</li>
+                                    <li>และอื่นๆ</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4 text-center">
+            <a href="{{ url_for('main.backup_data') }}" class="btn btn-primary me-2">
+                <i class="bi bi-arrow-repeat me-2"></i>สำรองข้อมูลอีกครั้ง
+            </a>
+            <a href="{{ url_for('main.settings') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-gear me-2"></i>ตั้งค่าระบบ
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if not db_backup or not excel_export %}
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>การแก้ไขปัญหา</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <h6><strong>หากการสำรองข้อมูลไม่สำเร็จ ให้ตรวจสอบ:</strong></h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="mb-0">
+                        <li><strong>สิทธิ์การเข้าถึงไฟล์:</strong> ตรวจสอบสิทธิ์อ่าน/เขียนไฟล์</li>
+                        <li><strong>พื้นที่ดิสก์:</strong> ตรวจสอบพื้นที่ว่างเพียงพอ</li>
+                        <li><strong>การเชื่อมต่อฐานข้อมูล:</strong> ตรวจสอบการเชื่อมต่อ</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="mb-0">
+                        <li><strong>ไฟล์ฐานข้อมูล:</strong> ตรวจสอบตำแหน่งไฟล์ .db</li>
+                        <li><strong>Dependencies:</strong> ตรวจสอบ pandas และ xlsxwriter</li>
+                        <li><strong>หน่วยความจำ:</strong> ตรวจสอบ RAM ที่เหลือ</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <h6>ข้อมูลการกำหนดค่าปัจจุบัน:</h6>
+            <div class="bg-light p-3 rounded">
+                <div class="row">
+                    <div class="col-md-4">
+                        <small class="text-muted">
+                            <strong>Database Type:</strong><br>
+                            {% if config.SQLALCHEMY_DATABASE_URI.startswith('sqlite') %}
+                            SQLite
+                            {% elif config.SQLALCHEMY_DATABASE_URI.startswith('mysql') %}
+                            MySQL
+                            {% else %}
+                            อื่นๆ
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">
+                            <strong>Upload Folder:</strong><br>
+                            {{ config.UPLOAD_FOLDER }}
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">
+                            <strong>Backup Directory:</strong><br>
+                            {{ config.UPLOAD_FOLDER }}/backups/
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>การสำรองข้อมูลอัตโนมัติ</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h6><strong>คำแนะนำ:</strong></h6>
+                    <p class="mb-2">ควรตั้งค่าการสำรองข้อมูลอัตโนมัติเพื่อความปลอดภัยของข้อมูล</p>
+                    <p class="mb-0">สามารถใช้ Cron Job หรือ Task Scheduler เพื่อเรียกใช้ URL การสำรองข้อมูลเป็นระยะ</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <i class="bi bi-clock-history" style="font-size: 3rem; color: var(--primary-color);"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <label class="form-label small"><strong>ตัวอย่าง Cron Job:</strong></label>
+                <div class="bg-dark text-light p-2 rounded">
+                    <code class="text-light">0 2 * * 0 curl -X GET "{{ url_for('main.backup_data', _external=True) }}"</code>
+                </div>
+                <small class="text-muted">รันทุกวันอาทิตย์เวลา 02:00 น.</small>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <i class="bi bi-calendar-week text-primary" style="font-size: 2rem;"></i>
+                        <h6 class="mt-2">รายสัปดาห์</h6>
+                        <small class="text-muted">แนะนำสำหรับธุรกิจขนาดเล็ก</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <i class="bi bi-calendar-day text-success" style="font-size: 2rem;"></i>
+                        <h6 class="mt-2">รายวัน</h6>
+                        <small class="text-muted">แนะนำสำหรับธุรกิจขนาดกลาง</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <i class="bi bi-clock text-warning" style="font-size: 2rem;"></i>
+                        <h6 class="mt-2">รายชั่วโมง</h6>
+                        <small class="text-muted">แนะนำสำหรับธุรกิจขนาดใหญ่</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

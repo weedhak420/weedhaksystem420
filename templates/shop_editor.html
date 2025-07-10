@@ -1,0 +1,790 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="bi bi-brush me-2"></i>จัดการหน้าร้านค้า</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('main.index') }}" class="btn btn-sm btn-primary" target="_blank">
+            <i class="bi bi-eye me-2"></i>ดูหน้าร้านค้า
+        </a>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary ms-2">
+            <i class="bi bi-arrow-left me-2"></i>กลับไปยังแดชบอร์ด
+        </a>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row">
+    <!-- แท็บควบคุม -->
+    <div class="col-12 mb-4">
+        <ul class="nav nav-tabs" id="shopEditorTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="hero-tab" data-bs-toggle="tab" data-bs-target="#hero" type="button" role="tab" aria-controls="hero" aria-selected="true">
+                    <i class="bi bi-image me-2"></i>ส่วนหัว
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="banner-shop-tab" data-bs-toggle="tab" data-bs-target="#banner-shop" type="button" role="tab" aria-controls="banner-shop" aria-selected="false">
+                    <i class="bi bi-badge-ad me-2"></i>แบนเนอร์ร้านค้าหลัก
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="banner-stock-tab" data-bs-toggle="tab" data-bs-target="#banner-stock" type="button" role="tab" aria-controls="banner-stock" aria-selected="false">
+                    <i class="bi bi-boxes me-2"></i>แบนเนอร์สต็อกสินค้า
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="featured-tab" data-bs-toggle="tab" data-bs-target="#featured" type="button" role="tab" aria-controls="featured" aria-selected="false">
+                    <i class="bi bi-star me-2"></i>สินค้าแนะนำ
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="theme-tab" data-bs-toggle="tab" data-bs-target="#theme" type="button" role="tab" aria-controls="theme" aria-selected="false">
+                    <i class="bi bi-palette me-2"></i>ธีมและสี
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="footer-tab" data-bs-toggle="tab" data-bs-target="#footer" type="button" role="tab" aria-controls="footer" aria-selected="false">
+                    <i class="bi bi-layout-text-window-reverse me-2"></i>ส่วนท้าย
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="icons-tab" data-bs-toggle="tab" data-bs-target="#icons" type="button" role="tab" aria-controls="icons" aria-selected="false">
+                    <i class="bi bi-gem me-2"></i>ไอคอนและโลโก���
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- เนื้อหาแท็บ -->
+    <div class="col-12">
+        <div class="tab-content" id="shopEditorTabContent">
+            <!-- แท็บส่วนหัว (Hero Section) -->
+            <div class="tab-pane fade show active" id="hero" role="tabpanel" aria-labelledby="hero-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">แก้ไขส่วนหัวของหน้าร้านค้า</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('main.update_shop_hero') }}" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <div class="mb-3">
+                                <label for="hero_title" class="form-label">หัวข้อหลัก</label>
+                                <input type="text" class="form-control" id="hero_title" name="hero_title" value="{{ shop_settings.hero_title }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="hero_subtitle" class="form-label">หัวข้อรอง</label>
+                                <input type="text" class="form-control" id="hero_subtitle" name="hero_subtitle" value="{{ shop_settings.hero_subtitle }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="hero_background" class="form-label">ภาพพื้นหลัง</label>
+                                {% if shop_settings.hero_background %}
+                                <div class="mb-2">
+                                    <img src="{{ url_for('static', filename=shop_settings.hero_background) }}" class="img-thumbnail" style="max-height: 150px;" alt="Hero Background">
+                                </div>
+                                {% endif %}
+                                <input type="file" class="form-control" id="hero_background" name="hero_background" accept="image/*">
+                                <div class="form-text">แนะนำขนาดภาพ 1920x500 พิกเซล</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="hero_text_color" class="form-label">สีข้อความ</label>
+                                    <input type="color" class="form-control form-control-color" id="hero_text_color" name="hero_text_color" value="{{ shop_settings.hero_text_color or '#ffffff' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="hero_button_text" class="form-label">ข้อความปุ่ม (ถ้ามี)</label>
+                                    <input type="text" class="form-control" id="hero_button_text" name="hero_button_text" value="{{ shop_settings.hero_button_text }}">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">บันทึกการเปลี่ยนแปลง</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- แท็บแบนเนอร์ร้านค้าหลัก -->
+            <div class="tab-pane fade" id="banner-shop" role="tabpanel" aria-labelledby="banner-shop-tab">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">จัดการแบนเนอร์ร้านค้าหลัก</h5>
+                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addBannerModal" data-page-location="shop">
+                            <i class="bi bi-plus-circle me-2"></i>เพิ่มแบนเนอร์
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        {% if shop_banners_top or shop_banners_middle or shop_banners_bottom %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ภาพ</th>
+                                        <th>หัวข้อ</th>
+                                        <th>ลิงก์</th>
+                                        <th>ตำแหน่ง</th>
+                                        <th>สถานะ</th>
+                                        <th>การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for banner in shop_banners_top %}
+                                    <tr>
+                                        <td>
+                                            <img src="{{ url_for('static', filename=banner.image_path) }}" class="img-thumbnail" style="max-height: 80px;" alt="{{ banner.title }}">
+                                        </td>
+                                        <td>{{ banner.title }}</td>
+                                        <td>
+                                            {% if banner.link %}
+                                            <a href="{{ banner.link }}" target="_blank">{{ banner.link }}</a>
+                                            {% else %}
+                                            -
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ banner.position }} (ร้านค้าหลัก)</td>
+                                        <td>
+                                            {% if banner.is_active %}
+                                            <span class="badge bg-success">แสดง</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">ซ่อน</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete-banner" data-id="{{ banner.id }}" data-bs-toggle="modal" data-bs-target="#deleteBannerModal">ลบ</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% for banner in shop_banners_middle %}
+                                    <tr>
+                                        <td>
+                                            <img src="{{ url_for('static', filename=banner.image_path) }}" class="img-thumbnail" style="max-height: 80px;" alt="{{ banner.title }}">
+                                        </td>
+                                        <td>{{ banner.title }}</td>
+                                        <td>
+                                            {% if banner.link %}
+                                            <a href="{{ banner.link }}" target="_blank">{{ banner.link }}</a>
+                                            {% else %}
+                                            -
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ banner.position }} (ร้านค้าหลัก)</td>
+                                        <td>
+                                            {% if banner.is_active %}
+                                            <span class="badge bg-success">แสดง</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">ซ่อน</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete-banner" data-id="{{ banner.id }}" data-bs-toggle="modal" data-bs-target="#deleteBannerModal">ลบ</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% for banner in shop_banners_bottom %}
+                                    <tr>
+                                        <td>
+                                            <img src="{{ url_for('static', filename=banner.image_path) }}" class="img-thumbnail" style="max-height: 80px;" alt="{{ banner.title }}">
+                                        </td>
+                                        <td>{{ banner.title }}</td>
+                                        <td>
+                                            {% if banner.link %}
+                                            <a href="{{ banner.link }}" target="_blank">{{ banner.link }}</a>
+                                            {% else %}
+                                            -
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ banner.position }} (ร้านค้าหลัก)</td>
+                                        <td>
+                                            {% if banner.is_active %}
+                                            <span class="badge bg-success">แสดง</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">ซ่อน</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete-banner" data-id="{{ banner.id }}" data-bs-toggle="modal" data-bs-target="#deleteBannerModal">ลบ</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>ยังไม่มีแบนเนอร์สำหรับร้านค้าหลัก กรุณาเพิ่มแบนเนอร์
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- แท็บแบนเนอร์สต็อกสินค้า -->
+            <div class="tab-pane fade" id="banner-stock" role="tabpanel" aria-labelledby="banner-stock-tab">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">จัดการแบนเนอร์หน้าสต็อกสินค้า</h5>
+                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addBannerModal" data-page-location="shop_stock">
+                            <i class="bi bi-plus-circle me-2"></i>เพิ่มแบนเนอร์
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        {% if shop_stock_banners_top or shop_stock_banners_middle or shop_stock_banners_bottom %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ภาพ</th>
+                                        <th>หั���ข้อ</th>
+                                        <th>ลิงก์</th>
+                                        <th>ตำแหน่ง</th>
+                                        <th>สถานะ</th>
+                                        <th>การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for banner in shop_stock_banners_top %}
+                                    <tr>
+                                        <td>
+                                            <img src="{{ url_for('static', filename=banner.image_path) }}" class="img-thumbnail" style="max-height: 80px;" alt="{{ banner.title }}">
+                                        </td>
+                                        <td>{{ banner.title }}</td>
+                                        <td>
+                                            {% if banner.link %}
+                                            <a href="{{ banner.link }}" target="_blank">{{ banner.link }}</a>
+                                            {% else %}
+                                            -
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ banner.position }} (สต็อกสินค้า)</td>
+                                        <td>
+                                            {% if banner.is_active %}
+                                            <span class="badge bg-success">แสดง</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">ซ่อน</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete-banner" data-id="{{ banner.id }}" data-bs-toggle="modal" data-bs-target="#deleteBannerModal">ลบ</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% for banner in shop_stock_banners_middle %}
+                                    <tr>
+                                        <td>
+                                            <img src="{{ url_for('static', filename=banner.image_path) }}" class="img-thumbnail" style="max-height: 80px;" alt="{{ banner.title }}">
+                                        </td>
+                                        <td>{{ banner.title }}</td>
+                                        <td>
+                                            {% if banner.link %}
+                                            <a href="{{ banner.link }}" target="_blank">{{ banner.link }}</a>
+                                            {% else %}
+                                            -
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ banner.position }} (สต็อกสินค้า)</td>
+                                        <td>
+                                            {% if banner.is_active %}
+                                            <span class="badge bg-success">แสดง</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">ซ่อน</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete-banner" data-id="{{ banner.id }}" data-bs-toggle="modal" data-bs-target="#deleteBannerModal">ลบ</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% for banner in shop_stock_banners_bottom %}
+                                    <tr>
+                                        <td>
+                                            <img src="{{ url_for('static', filename=banner.image_path) }}" class="img-thumbnail" style="max-height: 80px;" alt="{{ banner.title }}">
+                                        </td>
+                                        <td>{{ banner.title }}</td>
+                                        <td>
+                                            {% if banner.link %}
+                                            <a href="{{ banner.link }}" target="_blank">{{ banner.link }}</a>
+                                            {% else %}
+                                            -
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ banner.position }} (สต็อกสินค้า)</td>
+                                        <td>
+                                            {% if banner.is_active %}
+                                            <span class="badge bg-success">แสดง</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">ซ่อน</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete-banner" data-id="{{ banner.id }}" data-bs-toggle="modal" data-bs-target="#deleteBannerModal">ลบ</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>ยังไม่มีแบนเนอร์สำหรับหน้าสต็อกสินค้า กรุณาเพิ่มแบนเนอร์
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- แท็บสินค้าแนะนำ -->
+            <div class="tab-pane fade" id="featured" role="tabpanel" aria-labelledby="featured-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">จัดการสินค้าแนะนำ</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('main.update_featured_products') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <div class="mb-3">
+                                <label for="featured_title" class="form-label">หัวข้อส่วนสินค้าแนะนำ</label>
+                                <input type="text" class="form-control" id="featured_title" name="featured_title" value="{{ shop_settings.featured_title or 'สินค้าแนะนำ' }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="featured_subtitle" class="form-label">คำอธิบายส่วนสินค้าแนะนำ</label>
+                                <input type="text" class="form-control" id="featured_subtitle" name="featured_subtitle" value="{{ shop_settings.featured_subtitle }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">เลือกสินค้าแนะนำ (สูงสุด 6 รายการ)</label>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 50px;">เลือก</th>
+                                                <th>สินค้า</th>
+                                                <th>รสชาติ</th>
+                                                <th>ราคา</th>
+                                                <th>สต็อก</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for product in products %}
+                                            <tr>
+                                                <td>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input featured-product-checkbox" type="checkbox" name="featured_products[]" value="{{ product.id }}" 
+                                                        {% if product.id in featured_product_ids %}checked{% endif %}
+                                                        {% if product.stock <= 0 %}disabled{% endif %}>
+                                                    </div>
+                                                </td>
+                                                <td>{{ product.name }}</td>
+                                                <td>{{ product.flavor }}</td>
+                                                <td>฿{{ '{:,.2f}'.format(product.price) }}</td>
+                                                <td>
+                                                    {% if product.stock > 0 %}
+                                                    <span class="badge bg-success">{{ product.stock }} ชิ้น</span>
+                                                    {% else %}
+                                                    <span class="badge bg-danger">สินค้าหมด</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">บันทึกการเปลี่ยนแปลง</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- แท็บธีมและสี -->
+            <div class="tab-pane fade" id="theme" role="tabpanel" aria-labelledby="theme-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">ปรับแต่งธีมและสี</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('main.update_shop_theme') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="primary_color" class="form-label">สีหลัก</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color" id="primary_color" name="primary_color" value="{{ shop_settings.primary_color or '#0066cc' }}">
+                                        <input type="text" class="form-control" value="{{ shop_settings.primary_color or '#0066cc' }}" id="primary_color_text">
+                                    </div>
+                                    <div class="form-text">ใช้สำหรับปุ่ม, หัวข้อ, และองค์ประกอบหลัก</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="secondary_color" class="form-label">สีรอง</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color" id="secondary_color" name="secondary_color" value="{{ shop_settings.secondary_color or '#001f3f' }}">
+                                        <input type="text" class="form-control" value="{{ shop_settings.secondary_color or '#001f3f' }}" id="secondary_color_text">
+                                    </div>
+                                    <div class="form-text">ใช้สำหรับส่วนหัว, ส่วนท้าย, และพื้นหลัง</div>
+                                </div>
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="accent_color" class="form-label">สีเน้น</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color" id="accent_color" name="accent_color" value="{{ shop_settings.accent_color or '#ffc107' }}">
+                                        <input type="text" class="form-control" value="{{ shop_settings.accent_color or '#ffc107' }}" id="accent_color_text">
+                                    </div>
+                                    <div class="form-text">ใช้สำหรับไอคอน, แถบเลื่อน, และการเน้น</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="text_color" class="form-label">สีข้อความ</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color" id="text_color" name="text_color" value="{{ shop_settings.text_color or '#333333' }}">
+                                        <input type="text" class="form-control" value="{{ shop_settings.text_color or '#333333' }}" id="text_color_text">
+                                    </div>
+                                    <div class="form-text">ใช้สำหรับข้อความทั่วไปในเว็บไซต์</div>
+                                </div>
+                            </div>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="font_family" class="form-label">ฟอนต์</label>
+                                    <select class="form-select" id="font_family" name="font_family">
+                                        <option value="Kanit" {% if shop_settings.font_family == 'Kanit' %}selected{% endif %}>Kanit</option>
+                                        <option value="Sarabun" {% if shop_settings.font_family == 'Sarabun' %}selected{% endif %}>Sarabun</option>
+                                        <option value="Prompt" {% if shop_settings.font_family == 'Prompt' %}selected{% endif %}>Prompt</option>
+                                        <option value="Mitr" {% if shop_settings.font_family == 'Mitr' %}selected{% endif %}>Mitr</option>
+                                        <option value="Taviraj" {% if shop_settings.font_family == 'Taviraj' %}selected{% endif %}>Taviraj</option>
+                                    </select>
+                                    <div class="form-text">เลือกฟอนต์สำหรับเว็บไซต์</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="border_radius" class="form-label">ความโค้งของมุม</label>
+                                    <div class="input-group">
+                                        <input type="range" class="form-range" id="border_radius_range" min="0" max="20" step="1" value="{{ shop_settings.border_radius or '8' }}">
+                                        <input type="number" class="form-control" id="border_radius" name="border_radius" min="0" max="20" value="{{ shop_settings.border_radius or '8' }}">
+                                        <span class="input-group-text">px</span>
+                                    </div>
+                                    <div class="form-text">ปรับความโค้งของมุมสำหรับปุ่ม, การ์ด, และองค์ประกอบอื่นๆ</div>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label">ตัวอย่างธีม</label>
+                                <div class="theme-preview p-3 border rounded" id="theme-preview">
+                                    <h3 class="preview-heading">ตัวอย่างหัวข้อ</h3>
+                                    <p class="preview-text">นี่คือตัวอย่างข้อความที่จะแสดงบนเว็บไซต์ของคุณ</p>
+                                    <button class="btn preview-button">ปุ่มตัวอย่าง</button>
+                                    <div class="preview-card mt-3 p-3">
+                                        <h5 class="preview-card-title">หัวข้อการ์ด</h5>
+                                        <p class="preview-card-text">เนื้อหาในการ์ดตัวอย่าง</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">บันทึกการเปลี่ยนแปลง</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- แท็บส่วนท้าย (Footer) -->
+            <div class="tab-pane fade" id="footer" role="tabpanel" aria-labelledby="footer-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">แก้ไขส่วนท้ายของหน้าร้านค้า</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('main.update_shop_footer') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <div class="mb-3">
+                                <label for="footer_text" class="form-label">ข้อความลิขสิทธิ์</label>
+                                <input type="text" class="form-control" id="footer_text" name="footer_text" value="{{ shop_settings.footer_text or '&copy; 2025 Marbo 9k Shop. สงวนลิขสิทธิ์ทุกประการ.' }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="contact_phone" class="form-label">เบอร์โทรติดต่อ</label>
+                                <input type="text" class="form-control" id="contact_phone" name="contact_phone" value="{{ shop_settings.contact_phone }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="contact_email" class="form-label">อีเมลติดต่อ</label>
+                                <input type="email" class="form-control" id="contact_email" name="contact_email" value="{{ shop_settings.contact_email }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="social_facebook" class="form-label">Facebook URL</label>
+                                <input type="url" class="form-control" id="social_facebook" name="social_facebook" value="{{ shop_settings.social_facebook }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="social_instagram" class="form-label">Instagram URL</label>
+                                <input type="url" class="form-control" id="social_instagram" name="social_instagram" value="{{ shop_settings.social_instagram }}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="social_line" class="form-label">Line ID</label>
+                                <input type="text" class="form-control" id="social_line" name="social_line" value="{{ shop_settings.social_line }}">
+                            </div>
+                            <button type="submit" class="btn btn-primary">บันทึกการเปลี่ยนแปลง</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- Icons & Logo Tab -->
+            <div class="tab-pane fade" id="icons" role="tabpanel" aria-labelledby="icons-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">จัดการไอคอนและโลโก้</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('main.update_shop_icons') }}" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <div class="row">
+                                <!-- Favicon -->
+                                <div class="col-md-6 mb-4">
+                                    <h5>Favicon</h5>
+                                    <p class="text-muted">ไอคอนที่แสดงบนแท็บของเบราว์เซอร์ (ควรเป็นไฟล์ .ico, .png, .svg)</p>
+                                    {% if shop_settings.favicon_path %}
+                                    <div class="mb-2">
+                                        <p>Favicon ปัจจุบัน:</p>
+                                        <img src="{{ url_for('static', filename=shop_settings.favicon_path) }}" class="img-thumbnail" style="max-height: 48px;" alt="Favicon">
+                                    </div>
+                                    {% endif %}
+                                    <div class="mb-3">
+                                        <label for="favicon" class="form-label">อัปโหลด Favicon ใหม่</label>
+                                        <input type="file" class="form-control" id="favicon" name="favicon" accept="image/png, image/vnd.microsoft.icon, image/svg+xml, image/webp">
+                                    </div>
+                                </div>
+
+                                <!-- Navbar Logo -->
+                                <div class="col-md-6 mb-4">
+                                    <h5>Navbar Logo</h5>
+                                    <p class="text-muted">โลโก้ที่แสดงบนแถบนำทางของร้านค้า</p>
+                                    {% if shop_settings.navbar_logo_path %}
+                                    <div class="mb-2">
+                                        <p>โลโก้ปัจจ���บัน:</p>
+                                        <img src="{{ url_for('static', filename=shop_settings.navbar_logo_path) }}" class="img-thumbnail" style="max-height: 48px; background-color: #f0f0f0;" alt="Navbar Logo">
+                                    </div>
+                                    {% endif %}
+                                    <div class="mb-3">
+                                        <label for="navbar_logo" class="form-label">อัปโหลดโลโก้ใหม่</label>
+                                        <input type="file" class="form-control" id="navbar_logo" name="navbar_logo" accept="image/*">
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">บันทึกไอคอนและโลโก้</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal เพิ่มแบนเนอร์ -->
+<div class="modal fade" id="addBannerModal" tabindex="-1" aria-labelledby="addBannerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addBannerModalLabel">เพิ่มแบนเนอร์โฆษณา</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('main.add_banner') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="banner_title" class="form-label">หัวข้อแบนเนอร์</label>
+                        <input type="text" class="form-control" id="banner_title" name="banner_title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="banner_image" class="form-label">รูปภาพแบนเนอร์</label>
+                        <input type="file" class="form-control" id="banner_image" name="banner_image" accept="image/*" required>
+                        <div class="form-text">แนะนำขนาดภาพ 1200x300 พิกเซล</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="banner_link" class="form-label">ลิงก์ (ถ้ามี)</label>
+                        <input type="url" class="form-control" id="banner_link" name="banner_link">
+                    </div>
+                    <div class="mb-3">
+                        <label for="page_location" class="form-label">แสดงบนหน้า</label>
+                        <select class="form-select" id="page_location" name="page_location" required>
+                            <option value="shop">ร้านค้าหลัก</option>
+                            <option value="shop_stock">สถานะสต็อกสินค้า</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="banner_position" class="form-label">ตำแหน่ง</label>
+                        <select class="form-select" id="banner_position" name="banner_position">
+                            <option value="top">ด้านบน (ใต้ส่วนหัว)</option>
+                            <option value="middle">ตรงกลาง (ระหว่างสินค้า)</option>
+                            <option value="bottom">ด้านล่าง (เหนือส่วนท้าย)</option>
+                        </select>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="banner_active" name="banner_active" checked>
+                        <label class="form-check-label" for="banner_active">
+                            แสดงแบนเนอร์
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal ลบแบนเนอร์ -->
+<div class="modal fade" id="deleteBannerModal" tabindex="-1" aria-labelledby="deleteBannerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteBannerModalLabel">ยืนยันการลบแบนเนอร์</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                คุณแน่ใจหรือไม่ที่ต้องการลบแบนเนอร์นี้?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <form method="POST" action="" id="deleteBannerForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="banner_id" id="delete_banner_id">
+                    <button type="submit" class="btn btn-danger">ลบ</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ฟังก์ชันอัปเดตตัวอย่างธีม
+    function updateThemePreview() {
+        const primaryColor = document.getElementById('primary_color').value;
+        const secondaryColor = document.getElementById('secondary_color').value;
+        const accentColor = document.getElementById('accent_color').value;
+        const textColor = document.getElementById('text_color').value;
+        const fontFamily = document.getElementById('font_family').value;
+        const borderRadius = document.getElementById('border_radius').value + 'px';
+        
+        const preview = document.getElementById('theme-preview');
+        const previewHeading = document.querySelector('.preview-heading');
+        const previewText = document.querySelector('.preview-text');
+        const previewButton = document.querySelector('.preview-button');
+        const previewCard = document.querySelector('.preview-card');
+        const previewCardTitle = document.querySelector('.preview-card-title');
+        const previewCardText = document.querySelector('.preview-card-text');
+        
+        // อัปเดตสไตล์
+        preview.style.fontFamily = fontFamily;
+        previewHeading.style.color = primaryColor;
+        previewText.style.color = textColor;
+        
+        previewButton.style.backgroundColor = primaryColor;
+        previewButton.style.color = '#ffffff';
+        previewButton.style.border = 'none';
+        previewButton.style.borderRadius = borderRadius;
+        previewButton.style.padding = '8px 16px';
+        
+        previewCard.style.backgroundColor = '#ffffff';
+        previewCard.style.borderRadius = borderRadius;
+        previewCard.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+        previewCard.style.border = '1px solid #eee';
+        
+        previewCardTitle.style.color = secondaryColor;
+        previewCardText.style.color = textColor;
+    }
+    
+    // เชื่อมต่อเหตุการณ์การเปลี่ยนแปลงสี
+    document.getElementById('primary_color').addEventListener('input', function() {
+        document.getElementById('primary_color_text').value = this.value;
+        updateThemePreview();
+    });
+    
+    document.getElementById('primary_color_text').addEventListener('input', function() {
+        document.getElementById('primary_color').value = this.value;
+        updateThemePreview();
+    });
+    
+    document.getElementById('secondary_color').addEventListener('input', function() {
+        document.getElementById('secondary_color_text').value = this.value;
+        updateThemePreview();
+    });
+    
+    document.getElementById('secondary_color_text').addEventListener('input', function() {
+        document.getElementById('secondary_color').value = this.value;
+        updateThemePreview();
+    });
+    
+    document.getElementById('accent_color').addEventListener('input', function() {
+        document.getElementById('accent_color_text').value = this.value;
+        updateThemePreview();
+    });
+    
+    document.getElementById('accent_color_text').addEventListener('input', function() {
+        document.getElementById('accent_color').value = this.value;
+        updateThemePreview();
+    });
+    
+    document.getElementById('text_color').addEventListener('input', function() {
+        document.getElementById('text_color_text').value = this.value;
+        updateThemePreview();
+    });
+    
+    document.getElementById('text_color_text').addEventListener('input', function() {
+        document.getElementById('text_color').value = this.value;
+        updateThemePreview();
+    });
+    
+    document.getElementById('font_family').addEventListener('change', updateThemePreview);
+    
+    // เชื่อมต่อเหตุการณ์การเปลี่ยนแปลงความโค้งของมุม
+    document.getElementById('border_radius_range').addEventListener('input', function() {
+        document.getElementById('border_radius').value = this.value;
+        updateThemePreview();
+    });
+    
+    document.getElementById('border_radius').addEventListener('input', function() {
+        document.getElementById('border_radius_range').value = this.value;
+        updateThemePreview();
+    });
+    
+    // จำกัดจำนวนสินค้าแนะนำที่เลือกได้
+    const featuredCheckboxes = document.querySelectorAll('.featured-product-checkbox');
+    featuredCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const checked = document.querySelectorAll('.featured-product-checkbox:checked');
+            if (checked.length > 6) {
+                this.checked = false;
+                alert('คุณสามารถเลือกสินค้าแนะนำได้สูงสุด 6 รายการเท่านั้น');
+            }
+        });
+    });
+    
+    // จัดการการลบแบนเนอร์
+    const deleteBannerButtons = document.querySelectorAll('.delete-banner');
+    const deleteBannerForm = document.getElementById('deleteBannerForm');
+    const deleteBannerUrlTemplate = "{{ url_for('main.delete_banner', banner_id=999999) }}";
+    deleteBannerButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const bannerId = this.getAttribute('data-id');
+            document.getElementById('delete_banner_id').value = bannerId;
+            deleteBannerForm.action = deleteBannerUrlTemplate.replace('999999', bannerId);
+        });
+    });
+
+    // ตั้งค่า page_location ใน modal เมื่อคลิกปุ่มเพิ่มแบนเนอร์
+    const addBannerModal = document.getElementById('addBannerModal');
+    addBannerModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget; // Button that triggered the modal
+        const pageLocation = button.getAttribute('data-page-location'); // Extract info from data-* attributes
+        const modalPageLocationSelect = addBannerModal.querySelector('#page_location');
+        if (pageLocation) {
+            modalPageLocationSelect.value = pageLocation;
+        } else {
+            modalPageLocationSelect.value = 'shop'; // Default to shop if not specified
+        }
+    });
+
+    // เริ่มต้นตัวอย่างธีม
+    updateThemePreview();
+});
+</script>
+{% endblock %}

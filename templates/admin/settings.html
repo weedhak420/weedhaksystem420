@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">ตั้งค่าระบบ</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>กลับไปยังแดชบอร์ด</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <h5 class="mb-3">ข้อมูลบริษัท</h5>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="company_name" class="form-label">ชื่อบริษัท</label>
+                    <input type="text" class="form-control" id="company_name" name="company_name" value="{{ settings.company_name }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="company_logo" class="form-label">โลโก้บริษัท</label>
+                    <input type="file" class="form-control" id="company_logo" name="company_logo" accept="image/*">
+                    {% if settings.company_logo %}
+                    <div class="mt-2">
+                        <img src="{{ url_for('static', filename=settings.company_logo) }}" alt="Company Logo" style="max-height: 50px;">
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="company_address" class="form-label">ที่อยู่</label>
+                <textarea class="form-control" id="company_address" name="company_address" rows="2">{{ settings.company_address }}</textarea>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="company_phone" class="form-label">เบอร์โทรศัพท์</label>
+                    <input type="text" class="form-control" id="company_phone" name="company_phone" value="{{ settings.company_phone }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="company_email" class="form-label">อีเมล</label>
+                    <input type="email" class="form-control" id="company_email" name="company_email" value="{{ settings.company_email }}">
+                </div>
+            </div>
+            
+            <h5 class="mb-3 mt-4">ตั้งค่าระบบ</h5>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="low_stock_threshold" class="form-label">เกณฑ์สินค้าใกล้หมด</label>
+                    <input type="number" class="form-control" id="low_stock_threshold" name="low_stock_threshold" value="{{ settings.low_stock_threshold }}" min="1">
+                    <div class="form-text">จำนวนสินค้าที่น้อยกว่าค่านี้จะถูกแสดงเป็นสินค้าใกล้หมด</div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">บันทึกการตั้งค่า</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

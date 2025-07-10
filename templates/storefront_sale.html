@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">ขายหน้าร้าน</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>กลับไปยังแดชบอร์ด</a>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
+    <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">กำลังโหลด...</span>
+    </div>
+    <div class="text-light mt-3">กำลังบันทึกการขายและอัพเดทข้อมูลใน Google Sheets...</div>
+    <div class="text-light mt-2">กรุณารอสักครู่</div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">รายการสินค้า</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="saleForm" action="{{ url_for('main.storefront_sale') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <!-- Customer Information -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="customer_name" class="form-label">ชื่อลูกค้า</label>
+                            <input type="text" class="form-control" id="customer_name" name="customer_name" 
+                                   value="Walk-in Customer" placeholder="ชื่อลูกค้า">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="customer_phone" class="form-label">เบอร์โทรศัพท์</label>
+                            <input type="tel" class="form-control" id="customer_phone" name="customer_phone" 
+                                   placeholder="เบอร์โทรศัพท์ (ไม่บังคับ)">
+                        </div>
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div class="mb-3">
+                        <label for="payment_method" class="form-label">วิธีการชำระเงิน</label>
+                        <select class="form-select" id="payment_method" name="payment_method" required>
+                            <option value="cash">เงินสด</option>
+                            <option value="transfer">โอนเงิน</option>
+                            <option value="credit_card">บัตรเครดิต</option>
+                            <option value="qr_code">QR Code</option>
+                        </select>
+                    </div>
+
+                    <!-- Product Items -->
+                    <div class="mb-3">
+                        <label class="form-label">รายการสินค้า</label>
+                        <div id="sale-items">
+                            <div class="row mb-2 sale-item">
+                                <div class="col-md-5">
+                                    <select class="form-select product-select" name="product_id[]" required>
+                                        <option value="">เลือกสินค้า</option>
+                                        {% for product in products %}
+                                        <option value="{{ product.id }}" 
+                                                data-price="{{ product.price }}" 
+                                                data-stock="{{ product.stock }}">
+                                            {{ product.name }} ({{ product.flavor }}) - ฿{{ '{:,.2f}'.format(product.price) }} 
+                                            (คงเหลือ: {{ product.stock }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="number" class="form-control quantity-input" name="quantity[]" 
+                                           min="1" placeholder="จำนวน" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control subtotal-display" 
+                                           placeholder="รวม" readonly>
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="btn btn-outline-danger w-100 remove-sale-item">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary mt-2" id="add-sale-item">
+                            <i class="bi bi-plus-circle me-2"></i>เพิ่มรายการ
+                        </button>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-circle me-2"></i>บันทึกการขาย
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">สรุปการขาย</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>จำนวนรายการ:</span>
+                    <span id="total-items">0</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>จำนวนชิ้น:</span>
+                    <span id="total-quantity">0</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>ยอดรวมทั้งสิ้น:</strong>
+                    <strong id="grand-total">฿0.00</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Product Selection -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">สินค้ายอดนิยม</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for product in products[:6] %}
+                    <div class="col-6 mb-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100 quick-add-product" 
+                                data-product-id="{{ product.id }}" 
+                                data-product-name="{{ product.name }} ({{ product.flavor }})"
+                                data-price="{{ product.price }}"
+                                data-stock="{{ product.stock }}">
+                            {{ product.name }}<br>
+                            <small>฿{{ '{:,.0f}'.format(product.price) }}</small>
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables
+let saleItems = [];
+
+// Add new sale item
+document.getElementById('add-sale-item').addEventListener('click', function() {
+    const container = document.getElementById('sale-items');
+    const newItem = document.createElement('div');
+    newItem.className = 'row mb-2 sale-item';
+    newItem.innerHTML = `
+        <div class="col-md-5">
+            <select class="form-select product-select" name="product_id[]" required>
+                <option value="">เลือกสินค้า</option>
+                {% for product in products %}
+                <option value="{{ product.id }}" 
+                        data-price="{{ product.price }}" 
+                        data-stock="{{ product.stock }}">
+                    {{ product.name }} ({{ product.flavor }}) - ฿{{ '{:,.2f}'.format(product.price) }} 
+                    (คงเหลือ: {{ product.stock }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <input type="number" class="form-control quantity-input" name="quantity[]" 
+                   min="1" placeholder="จำนวน" required>
+        </div>
+        <div class="col-md-3">
+            <input type="text" class="form-control subtotal-display" 
+                   placeholder="รวม" readonly>
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-outline-danger w-100 remove-sale-item">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(newItem);
+    attachEventListeners(newItem);
+});
+
+// Remove sale item
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-sale-item') || e.target.closest('.remove-sale-item')) {
+        const row = e.target.closest('.sale-item');
+        if (document.querySelectorAll('.sale-item').length > 1) {
+            row.remove();
+            updateTotals();
+        } else {
+            alert('ต้องมีรายการสินค้าอย่างน้อย 1 รายการ');
+        }
+    }
+});
+
+// Quick add product
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('quick-add-product') || e.target.closest('.quick-add-product')) {
+        const button = e.target.closest('.quick-add-product');
+        const productId = button.dataset.productId;
+        const productName = button.dataset.productName;
+        const price = parseFloat(button.dataset.price);
+        const stock = parseInt(button.dataset.stock);
+
+        if (stock <= 0) {
+            alert('สินค้าหมด');
+            return;
+        }
+
+        // Find empty row or add new row
+        let emptyRow = document.querySelector('.sale-item .product-select[value=""]');
+        if (!emptyRow) {
+            document.getElementById('add-sale-item').click();
+            emptyRow = document.querySelector('.sale-item:last-child .product-select');
+        }
+
+        // Set product and quantity
+        emptyRow.value = productId;
+        const quantityInput = emptyRow.closest('.sale-item').querySelector('.quantity-input');
+        quantityInput.value = 1;
+        
+        // Trigger change event to update subtotal
+        emptyRow.dispatchEvent(new Event('change'));
+        quantityInput.dispatchEvent(new Event('input'));
+    }
+});
+
+// Attach event listeners to product select and quantity input
+function attachEventListeners(container = document) {
+    container.querySelectorAll('.product-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const row = this.closest('.sale-item');
+            const quantityInput = row.querySelector('.quantity-input');
+            const subtotalDisplay = row.querySelector('.subtotal-display');
+            
+            if (this.value) {
+                const option = this.selectedOptions[0];
+                const price = parseFloat(option.dataset.price);
+                const stock = parseInt(option.dataset.stock);
+                
+                quantityInput.max = stock;
+                if (quantityInput.value) {
+                    const quantity = parseInt(quantityInput.value);
+                    if (quantity > stock) {
+                        quantityInput.value = stock;
+                        alert(`สินค้าคงเหลือเพียง ${stock} ชิ้น`);
+                    }
+                    subtotalDisplay.value = `฿${(price * parseInt(quantityInput.value)).toLocaleString('th-TH', {minimumFractionDigits: 2})}`;
+                }
+            } else {
+                subtotalDisplay.value = '';
+                quantityInput.max = '';
+            }
+            updateTotals();
+        });
+    });
+
+    container.querySelectorAll('.quantity-input').forEach(input => {
+        input.addEventListener('input', function() {
+            const row = this.closest('.sale-item');
+            const productSelect = row.querySelector('.product-select');
+            const subtotalDisplay = row.querySelector('.subtotal-display');
+            
+            if (productSelect.value && this.value) {
+                const option = productSelect.selectedOptions[0];
+                const price = parseFloat(option.dataset.price);
+                const stock = parseInt(option.dataset.stock);
+                const quantity = parseInt(this.value);
+                
+                if (quantity > stock) {
+                    this.value = stock;
+                    alert(`สินค้าคงเหลือเพียง ${stock} ชิ้น`);
+                }
+                
+                subtotalDisplay.value = `฿${(price * parseInt(this.value)).toLocaleString('th-TH', {minimumFractionDigits: 2})}`;
+            } else {
+                subtotalDisplay.value = '';
+            }
+            updateTotals();
+        });
+    });
+}
+
+// Update totals
+function updateTotals() {
+    let totalItems = 0;
+    let totalQuantity = 0;
+    let grandTotal = 0;
+
+    document.querySelectorAll('.sale-item').forEach(row => {
+        const productSelect = row.querySelector('.product-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        
+        if (productSelect.value && quantityInput.value) {
+            const option = productSelect.selectedOptions[0];
+            const price = parseFloat(option.dataset.price);
+            const quantity = parseInt(quantityInput.value);
+            
+            totalItems++;
+            totalQuantity += quantity;
+            grandTotal += price * quantity;
+        }
+    });
+
+    document.getElementById('total-items').textContent = totalItems;
+    document.getElementById('total-quantity').textContent = totalQuantity;
+    document.getElementById('grand-total').textContent = `฿${grandTotal.toLocaleString('th-TH', {minimumFractionDigits: 2})}`;
+}
+
+// Form submission
+document.getElementById('saleForm').addEventListener('submit', function(e) {
+    // Validate form
+    const customerName = document.getElementById('customer_name').value.trim();
+    if (!customerName) {
+        alert('กรุณาระบุชื่อลูกค้า');
+        e.preventDefault();
+        return false;
+    }
+
+    // Check if at least one product is selected
+    const productSelects = document.querySelectorAll('.product-select');
+    const quantityInputs = document.querySelectorAll('.quantity-input');
+    let hasValidItem = false;
+
+    for (let i = 0; i < productSelects.length; i++) {
+        if (productSelects[i].value && quantityInputs[i].value && parseInt(quantityInputs[i].value) > 0) {
+            hasValidItem = true;
+            break;
+        }
+    }
+
+    if (!hasValidItem) {
+        alert('กรุณาเลือกสินค้าและระบุจำนวนอย่างน้อย 1 รายการ');
+        e.preventDefault();
+        return false;
+    }
+
+    // Show loading overlay
+    document.getElementById('loading-overlay').style.display = 'flex';
+    
+    // Disable form to prevent double submission
+    const submitButton = this.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>กำลังบันทึก...';
+    
+    return true;
+});
+
+// Initialize event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    attachEventListeners();
+    updateTotals();
+});
+
+// Hide loading on page load (in case of back button)
+window.addEventListener('load', function() {
+    document.getElementById('loading-overlay').style.display = 'none';
+});
+</script>
+{% endblock %}

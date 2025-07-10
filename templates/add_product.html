@@ -1,0 +1,280 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">เพิ่มสินค้าใหม่</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+      <a href="{{ url_for('main.products') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-3"></i>กลับไปยังรายการสินค้า</a>
+      <a href="{{ url_for('main.inventory') }}" class="btn btn-primary btn-sm me-2"><i class="bi bi-arrow-left me-2"></i>กลับไปยังสต๊อก</a>
+  </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay d-none">
+    <div class="loading-content">
+        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 class="text-primary">กำลังบันทึกสินค้า...</h5>
+        <p class="text-muted mb-2">กำลังอัพเดทข้อมูลไปยัง Google Sheets</p>
+        <div class="progress" style="width: 300px;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+        </div>
+        <small class="text-muted mt-2 d-block">กรุณารอสักครู่...</small>
+    </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+      <form method="POST" enctype="multipart/form-data" id="addProductForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <div class="row mb-3">
+              <div class="col-md-6">
+                  <label for="name" class="form-label">ชื่อสินค้า</label>
+                  <select class="form-select" id="name" name="name" required>
+                      <option value="Marbo 9k" selected>Marbo 9k</option>
+                  </select>
+              </div>
+              <div class="col-md-6">
+                  <label for="flavor" class="form-label">รสชาติ</label>
+                  <select class="form-select" id="flavor" name="flavor" required>
+                      <option value="">เลือกรสชาติ</option>
+                      <option value="APPLE ALOE">APPLE ALOE</option>
+                      <option value="BLUE ICE">BLUE ICE</option>
+                      <option value="COLA">COLA</option>
+                      <option value="DOUBLE MINT">DOUBLE MINT</option>
+                      <option value="GRAPE ALOE">GRAPE ALOE</option>
+                      <option value="GRAPE LYCHEE">GRAPE LYCHEE</option>
+                      <option value="GRAPE MIXBERRY">GRAPE MIXBERRY</option>
+                      <option value="ORANGE SOUR">ORANGE SOUR</option>
+                      <option value="PEACH">PEACH</option>
+                      <option value="STRAWBERRY PEACH">STRAWBERRY PEACH</option>
+                      <option value="PINKBERRY">PINKBERRY</option>
+                      <option value="RAINBOW CANDY">RAINBOW CANDY</option>
+                      <option value="SOUR GUMMY">SOUR GUMMY</option>
+                      <option value="SPARKLING LEMON">SPARKLING LEMON</option>
+                      <option value="STRAWBERRY">STRAWBERRY</option>
+                      <option value="WATERMELON BUBBLEGUM">WATERMELON BUBBLEGUM</option>
+                      <option value="WATERMELON">WATERMELON</option>
+                  </select>
+              </div>
+          </div>
+          <div class="mb-3">
+              <label for="description" class="form-label">รายละเอียด</label>
+              <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+          </div>
+          <div class="row mb-3">
+              <div class="col-md-3">
+                  <label for="price" class="form-label">ราคาขาย (บาท)</label>
+                  <input type="number" class="form-control" id="price" name="price" value="380" min="0" step="0.01" required>
+              </div>
+              <div class="col-md-3">
+                  <label for="cost" class="form-label">ต้นทุน (บาท)</label>
+                  <input type="number" class="form-control" id="cost" name="cost" value="310" min="0" step="0.01" required>
+              </div>
+              <div class="col-md-3">
+                  <label for="wholesale_price" class="form-label">ราคาขายส่ง (บาท)</label>
+                  <input type="number" class="form-control" id="wholesale_price" name="wholesale_price" value="350" min="0" step="0.01">
+              </div>
+              <div class="col-md-3">
+                  <label for="stock" class="form-label">จำนวนในสต็อก</label>
+                  <input type="number" class="form-control" id="stock" name="stock" value="0" min="0" required>
+              </div>
+          </div>
+          <div class="row mb-3">
+              <div class="col-md-4">
+                  <label for="profit" class="form-label">กำไรต่อชิ้น</label>
+                  <input type="text" class="form-control" id="profit" readonly value="70">
+              </div>
+              <div class="col-md-4">
+                  <label for="profit_percentage" class="form-label">เปอร์เซ็นต์กำไร</label>
+                  <input type="text" class="form-control" id="profit_percentage" readonly value="18.42%">
+              </div>
+              <div class="col-md-4">
+                  <label for="wholesale_profit" class="form-label">กำไรขายส่ง</label>
+                  <input type="text" class="form-control" id="wholesale_profit" readonly value="40">
+              </div>
+          </div>
+          <div class="mb-3">
+              <label for="barcode" class="form-label">บาร์โค้ด</label>
+              <input type="text" class="form-control" id="barcode" name="barcode" placeholder="ป้อนบาร์โค้ดสินค้า (ถ้ามี)">
+          </div>
+          <div class="mb-3">
+              <label for="image" class="form-label">รูปภาพสินค้า</label>
+              <input type="file" class="form-control" id="image" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
+              <div class="form-text">อัปโหลดรูปภาพสินค้า (ไม่จำเป็น, รองรับ JPG, PNG, GIF, WEBP)</div>
+              <div id="image-preview" class="mt-2 d-none">
+                  <p>ตัวอย่างรูปภาพ:</p>
+                  <img id="preview-img" src="#" alt="ตัวอย่างรูปภาพ" class="img-thumbnail" style="max-width: 200px;">
+              </div>
+              <div id="upload-error" class="alert alert-danger mt-2 d-none">
+                  เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ กรุณาตรวจสอบขนาดและประเภทของไฟล์
+              </div>
+            </div>
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+              <i class="bi bi-save me-2"></i>บันทึกสินค้า
+          </button>
+      </form>
+  </div>
+</div>
+
+<style>
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    width: 90%;
+}
+
+.progress {
+    height: 8px;
+    margin: 1rem auto;
+}
+
+.loading-overlay.show {
+    display: flex !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get form elements
+    const priceInput = document.getElementById('price');
+    const costInput = document.getElementById('cost');
+    const wholesalePriceInput = document.getElementById('wholesale_price');
+    const profitInput = document.getElementById('profit');
+    const profitPercentageInput = document.getElementById('profit_percentage');
+    const wholesaleProfitInput = document.getElementById('wholesale_profit');
+    const form = document.getElementById('addProductForm');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Function to calculate profit
+    function calculateProfit() {
+        const price = parseFloat(priceInput.value) || 0;
+        const cost = parseFloat(costInput.value) || 0;
+        const wholesalePrice = parseFloat(wholesalePriceInput.value) || 0;
+        
+        // Calculate profit per unit
+        const profit = price - cost;
+        profitInput.value = profit.toFixed(2);
+        
+        // Calculate profit percentage
+        const profitPercentage = price > 0 ? (profit / price) * 100 : 0;
+        profitPercentageInput.value = profitPercentage.toFixed(2) + '%';
+        
+        // Calculate wholesale profit
+        if (wholesalePrice > 0) {
+            const wholesaleProfit = wholesalePrice - cost;
+            wholesaleProfitInput.value = wholesaleProfit.toFixed(2);
+        } else {
+            wholesaleProfitInput.value = '';
+        }
+    }
+    
+    // Add event listeners to inputs
+    priceInput.addEventListener('input', calculateProfit);
+    costInput.addEventListener('input', calculateProfit);
+    wholesalePriceInput.addEventListener('input', calculateProfit);
+    
+    // Initial calculation
+    calculateProfit();
+
+    // Image preview functionality
+    const imageInput = document.getElementById('image');
+    const imagePreview = document.getElementById('image-preview');
+    const previewImg = document.getElementById('preview-img');
+    const uploadError = document.getElementById('upload-error');
+
+    imageInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            // ตรวจสอบประเภทไฟล์
+            if (!file.type.match('image/(jpeg|png|gif|webp)')) {
+                uploadError.classList.remove('d-none');
+                uploadError.textContent = 'กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น (JPG, PNG, GIF, WEBP)';
+                imagePreview.classList.add('d-none');
+                this.value = ''; // Clear the input
+                return;
+            }
+            
+            // ตรวจสอบขนาดไฟล์ (ไม่เกิน 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                uploadError.classList.remove('d-none');
+                uploadError.textContent = 'ขนาดไฟล์ต้องไม่เกิน 5MB';
+                imagePreview.classList.add('d-none');
+                this.value = ''; // Clear the input
+                return;
+            }
+            
+            uploadError.classList.add('d-none');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                imagePreview.classList.remove('d-none');
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Form submission with loading overlay
+    form.addEventListener('submit', function(e) {
+        // Show loading overlay
+        loadingOverlay.classList.remove('d-none');
+        loadingOverlay.classList.add('show');
+        
+        // Disable submit button
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>กำลังบันทึก...';
+        
+        // Simulate progress bar animation
+        const progressBar = document.querySelector('.progress-bar');
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            progressBar.style.width = progress + '%';
+        }, 200);
+        
+        // Clear interval after form submission
+        setTimeout(() => {
+            clearInterval(progressInterval);
+            progressBar.style.width = '100%';
+        }, 2000);
+        
+        // If there's an error, hide loading overlay
+        setTimeout(() => {
+            // This will be overridden by page redirect on success
+            if (document.querySelector('.alert-danger')) {
+                loadingOverlay.classList.add('d-none');
+                loadingOverlay.classList.remove('show');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-save me-2"></i>บันทึกสินค้า';
+            }
+        }, 5000);
+    });
+
+    // Handle page unload to hide loading if user navigates away
+    window.addEventListener('beforeunload', function() {
+        loadingOverlay.classList.add('d-none');
+        loadingOverlay.classList.remove('show');
+    });
+});
+</script>
+{% endblock %}

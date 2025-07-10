@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>อัปโหลดสลิปและระบุพิกัด - ออเดอร์ #{{ order.id }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        input[type="file"],
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .flash-message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .flash-message.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .flash-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .flash-message.info {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+        .order-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .order-info p {
+            margin: 5px 0;
+        }
+        .current-uploads {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f0f8ff;
+            border-radius: 4px;
+        }
+        .current-uploads img {
+            max-width: 100%;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+        }
+        .location-preview {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f0fff0;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .buttons .btn-secondary {
+            background-color: #6c757d;
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>อัปโหลดสลิปและระบุพิกัด</h2>
+        
+        <!-- ข้อมูลออเดอร์ -->
+        <div class="order-info">
+            <p><strong>ออเดอร์ #{{ order.id }}</strong></p>
+            <p><strong>ลูกค้า:</strong> {{ order.customer.name }}</p>
+            <p><strong>วันที่สั่ง:</strong> {{ order.order_date.strftime('%d/%m/%Y %H:%M') }}</p>
+            <p><strong>ยอดรวม:</strong> {{ order.total_amount|round(2) }} บาท</p>
+        </div>
+
+        <!-- แสดงข้อความ Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- แสดงข้อมูลปัจจุบัน (ถ้ามี) -->
+        {% if has_slip or has_location %}
+            <div class="current-uploads">
+                <h3>ข้อมูลปัจจุบัน</h3>
+                {% if has_slip %}
+                    <p><strong>สลิปการชำระเงิน:</strong> มีการอัปโหลดแล้ว เมื่อ {{ order.payment_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                    <img src="{{ url_for('static', filename=order.payment_slip) }}" alt="สลิปการชำระเงิน">
+                {% endif %}
+                
+                {% if has_location %}
+                    <p><strong>พิกัดสำหรับนัดรับ:</strong></p>
+                    <div class="location-preview">
+                        <a href="{{ order.pickup_location }}" target="_blank">{{ order.pickup_location }}</a>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="form-group">
+                <label for="payment_slip">อัปโหลดสลิปยืนยันการชำระเงิน</label>
+                <input type="file" name="payment_slip" id="payment_slip" accept="image/*" required>
+                <small style="display: block; margin-top: 5px; color: #6c757d;">รองรับไฟล์ jpg, jpeg, png, gif ขนาดไม่เกิน 16MB</small>
+            </div>
+
+            <div class="form-group">
+                <label for="location">พิกัดสำหรับนัดรับ (ลิงก์ Google Maps)</label>
+                <input type="text" name="location" id="location" placeholder="เช่น https://maps.google.com/..." value="{{ order.pickup_location or '' }}" required>
+                <small style="display: block; margin-top: 5px; color: #6c757d;">กรุณาใส่ลิงก์ Google Maps เพื่อระบุตำแหน่งสำหรับนัดรับสินค้า</small>
+            </div>
+
+            <div class="buttons">
+                <button type="submit">บันทึกข้อมูล</button>
+                <a href="{{ url_for('orders') }}" class="btn-secondary" style="text-decoration: none; color: white; text-align: center; padding: 10px 0;">กลับ</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
+

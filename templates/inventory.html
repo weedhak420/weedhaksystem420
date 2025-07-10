@@ -1,0 +1,594 @@
+{% extends 'base.html' %}
+
+{% block title %}สต็อกสินค้า - Marbo 9K System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stock-critical { color: #dc2626; font-weight: bold; }
+    .stock-low { color: #f59e0b; font-weight: bold; }
+    .stock-good { color: #16a34a; font-weight: bold; }
+    .profit-positive { color: #16a34a; }
+    .profit-negative { color: #dc2626; }
+    
+    .search-box {
+        position: relative;
+        max-width: 400px;
+        margin-bottom: 20px;
+    }
+    
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .search-result-item {
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .search-result-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+    
+    .search-loading {
+        padding: 15px;
+        text-align: center;
+        color: #6c757d;
+    }
+    
+    .stats-row {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 10px;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .table th {
+        background-color: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        padding: 12px 8px;
+    }
+    
+    .table td {
+        padding: 10px 8px;
+        vertical-align: middle;
+    }
+    
+    .btn-sm {
+        padding: 4px 8px;
+        font-size: 0.875rem;
+    }
+    
+    .alert-simple {
+        padding: 10px 15px;
+        margin-bottom: 20px;
+        border-radius: 6px;
+        border-left: 4px solid #0d6efd;
+        background-color: #cff4fc;
+    }
+    
+    .highlight {
+        background-color: #fff3cd;
+        animation: highlight-fade 2s ease-out;
+    }
+    
+    @keyframes highlight-fade {
+        0% { background-color: #fff3cd; }
+        100% { background-color: transparent; }
+    }
+    
+    .no-results {
+        text-align: center;
+        padding: 20px;
+        color: #6c757d;
+    }
+    
+    .search-result-actions {
+        margin-top: 8px;
+    }
+    
+    .search-result-actions .btn {
+        padding: 2px 6px;
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-boxes me-2"></i>สต็อกสินค้า</h2>
+        <div>
+            <a href="{{ url_for('main.add_product') }}" class="btn btn-primary btn-sm me-2">
+                <i class="bi bi-plus-circle me-1"></i>เพิ่มสต็อก
+            </a>
+            <a href="{{ url_for('main.inventory_history') }}" class="btn btn-success btn-sm">
+                <i class="bi bi-clock-history"></i>ประวัติสต็อก
+            </a>
+            <a href="{{ url_for('main.add_inventory_barcode') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-upc-scan me-1"></i>สแกนบาร์โค้ด
+            </a>
+            
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="row">
+            <div class="col-3">
+                <div class="stat-item">
+                    <span class="stat-number text-primary">{{ products|length }}</span>
+                    <span class="stat-label">สินค้าทั้งหมด</span>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="stat-item">
+                    <span class="stat-number text-success">{{ products|selectattr('stock', 'ge', 20)|list|length }}</span>
+                    <span class="stat-label">สต็อกปกติ</span>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="stat-item">
+                    <span class="stat-number text-warning">{{ products|selectattr('stock', 'lt', 20)|selectattr('stock', 'ge', 10)|list|length }}</span>
+                    <span class="stat-label">สต็อกต่ำ</span>
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="stat-item">
+                    <span class="stat-number text-danger">{{ products|selectattr('stock', 'lt', 10)|list|length }}</span>
+                    <span class="stat-label">สต็อกวิกฤต</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="search-box">
+                <input type="text" class="form-control" id="searchInput" placeholder="ค้นหาสินค้า, รสชาติ, หรือบาร์โค้ด...">
+                <div class="search-results" id="searchResults"></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="stockFilter">
+                <option value="">ทุกระดับสต็อก</option>
+                <option value="good">สต็อกปกติ (≥20)</option>
+                <option value="low">สต็อกต่ำ (10-19)</option>
+                <option value="critical">สต็อกวิกฤต (<10)</option>
+                <option value="out">สินค้าหมด (0)</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="sortBy">
+                <option value="name">เรียงตามชื่อ</option>
+                <option value="stock_asc">สต็อกน้อย → มาก</option>
+                <option value="stock_desc">สต็อกมาก → น้อย</option>
+                <option value="price_desc">ราคาสูง → ต่ำ</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">รีเซ็ต</button>
+        </div>
+    </div>
+
+    <!-- Low Stock Alert -->
+    {% set low_stock_products = products|selectattr('stock', 'lt', 10)|list %}
+    {% if low_stock_products %}
+    <div class="alert-simple">
+        <strong>แจ้งเตือน:</strong> มีสินค้า {{ low_stock_products|length }} รายการที่สต็อกต่ำกว่า 10 ชิ้น
+    </div>
+    {% endif %}
+
+    <!-- Products Table -->
+    <div class="table-responsive">
+        <table class="table table-hover" id="inventoryTable">
+            <thead>
+                <tr>
+                    <th width="60">รหัส</th>
+                    <th>ชื่อสินค้า</th>
+                    <th>รสชาติ</th>
+                    <th width="80">ราคา</th>
+                    <th width="80">ต้นทุน</th>
+                    <th width="80">กำไร</th>
+                    <th width="80">สต็อก</th>
+                    <th width="100">มูลค่า</th>
+                    <th width="120">บาร์โค้ด</th>
+                    <th width="120">จัดการ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr data-product-id="{{ product.id }}"
+                    data-name="{{ product.name|lower }}" 
+                    data-flavor="{{ product.flavor|lower }}" 
+                    data-barcode="{{ product.barcode or '' }}"
+                    data-stock="{{ product.stock }}"
+                    data-price="{{ product.price }}">
+                    
+                    <td><span class="badge bg-secondary">#{{ product.id }}</span></td>
+                    
+                    <td>
+                        <strong>{{ product.name }}</strong>
+                        {% if product.description %}
+                        <br><small class="text-muted">{{ product.description[:40] }}{% if product.description|length > 40 %}...{% endif %}</small>
+                        {% endif %}
+                    </td>
+                    
+                    <td><span class="badge bg-info">{{ product.flavor }}</span></td>
+                    
+                    <td>฿{{ '{:,.0f}'.format(product.price) }}</td>
+                    
+                    <td class="text-muted">฿{{ '{:,.0f}'.format(product.cost) }}</td>
+                    
+                    <td>
+                        {% set profit = product.price - product.cost %}
+                        <span class="{% if profit > 0 %}profit-positive{% else %}profit-negative{% endif %}">
+                            ฿{{ '{:,.0f}'.format(profit) }}
+                        </span>
+                    </td>
+                    
+                    <td>
+                        {% if product.stock < 10 %}
+                        <span class="stock-critical">{{ product.stock }}</span>
+                        {% elif product.stock < 20 %}
+                        <span class="stock-low">{{ product.stock }}</span>
+                        {% else %}
+                        <span class="stock-good">{{ product.stock }}</span>
+                        {% endif %}
+                    </td>
+                    
+                    <td>
+                        {% set stock_value = product.price * product.stock %}
+                        ฿{{ '{:,.0f}'.format(stock_value) }}
+                    </td>
+                    
+                    <td>
+                        {% if product.barcode %}
+                        <code>{{ product.barcode }}</code>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    
+                    <td>
+                        <a href="{{ url_for('main.edit_product', id=product.id) }}" 
+                           class="btn btn-success btn-sm me-1" title="เพิ่มสต็อก">
+                            <i class="bi bi-plus"></i>
+                        </a>
+                        <a href="{{ url_for('main.edit_product', id=product.id) }}" 
+                           class="btn btn-outline-secondary btn-sm" title="แก้ไข">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="10" class="text-center py-4">
+                        <div class="text-muted">
+                            <i class="bi bi-inbox fs-2"></i>
+                            <p class="mt-2">ยังไม่มีสินค้าในสต็อก</p>
+                            <a href="{{ url_for('main.add_product') }}" class="btn btn-primary btn-sm">เพิ่มสินค้าใหม่</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Summary -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">สรุปมูลค่าสต็อก</h6>
+                    {% set total_selling_value = 0 %}
+                    {% set total_cost_value = 0 %}
+                    {% for product in products %}
+                        {% set total_selling_value = total_selling_value + (product.price * product.stock) %}
+                        {% set total_cost_value = total_cost_value + (product.cost * product.stock) %}
+                    {% endfor %}
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h4 text-primary">฿{{ '{:,.0f}'.format(total_selling_value) }}</div>
+                            <small class="text-muted">มูลค่าขาย</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-success">฿{{ '{:,.0f}'.format(total_cost_value) }}</div>
+                            <small class="text-muted">มูลค่าต้นทุน</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">สถิติสต็อก</h6>
+                    {% set total_stock = 0 %}
+                    {% for product in products %}
+                        {% set total_stock = total_stock + product.stock %}
+                    {% endfor %}
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h4 text-info">{{ total_stock }}</div>
+                            <small class="text-muted">ชิ้นทั้งหมด</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-warning">{{ '{:.1f}'.format(total_stock / products|length if products|length > 0 else 0) }}</div>
+                            <small class="text-muted">เฉลี่ย/สินค้า</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+    const stockFilter = document.getElementById('stockFilter');
+    const sortBy = document.getElementById('sortBy');
+    const tableBody = document.querySelector('#inventoryTable tbody');
+    const originalRows = Array.from(tableBody.querySelectorAll('tr[data-name]'));
+    
+    let searchTimeout;
+    let isSearching = false;
+
+    // Live search functionality
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 2) {
+            hideSearchResults();
+            filterLocalResults(query);
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+            performSearch(query);
+        }, 300);
+    });
+
+    // Hide search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            hideSearchResults();
+        }
+    });
+
+    // Show search results when focusing on input
+    searchInput.addEventListener('focus', function() {
+        if (this.value.trim().length >= 2) {
+            performSearch(this.value.trim());
+        }
+    });
+
+    function performSearch(query) {
+        if (isSearching) return;
+        
+        isSearching = true;
+        showSearchLoading();
+        
+        fetch(`{{ url_for('main.api_search_inventory_products') }}?query=${encodeURIComponent(query)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                displaySearchResults(data.products || []);
+                filterLocalResults(query);
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                searchResults.innerHTML = '<div class="search-loading text-danger"><i class="bi bi-exclamation-triangle"></i> เกิดข้อผิดพลาดในการค้นหา</div>';
+                setTimeout(hideSearchResults, 2000);
+                filterLocalResults(query);
+            })
+            .finally(() => {
+                isSearching = false;
+            });
+    }
+
+    function showSearchLoading() {
+        searchResults.innerHTML = '<div class="search-loading"><i class="bi bi-search"></i> กำลังค้นหา...</div>';
+        searchResults.style.display = 'block';
+    }
+
+    function displaySearchResults(products) {
+        if (products.length === 0) {
+            searchResults.innerHTML = '<div class="search-loading">ไม่พบสินค้าที่ค้นหา</div>';
+            return;
+        }
+
+        let html = '';
+        products.forEach(product => {
+            const stockClass = product.stock < 10 ? 'stock-critical' : 
+                              product.stock < 20 ? 'stock-low' : 'stock-good';
+            
+            html += `
+                <div class="search-result-item" onclick="selectProduct(${product.id})">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div>
+                                <strong>${product.name}</strong> - <span class="badge bg-info">${product.flavor}</span>
+                            </div>
+                            <small class="text-muted">
+                                ราคา: ฿${product.price.toLocaleString()} | 
+                                สต็อก: <span class="${stockClass}">${product.stock}</span> ชิ้น
+                                ${product.barcode ? ` | ${product.barcode}` : ''}
+                            </small>
+                            <div class="search-result-actions">
+                                <a href="{{ url_for('main.edit_product', id='') }}${product.id}" 
+                                   class="btn btn-success btn-sm me-1" title="เพิ่มสต็อก">
+                                    <i class="bi bi-plus"></i> เพิ่มสต็อก
+                                </a>
+                                <a href="{{ url_for('main.edit_product', id='') }}${product.id}" 
+                                   class="btn btn-outline-secondary btn-sm" title="แก้ไข">
+                                    <i class="bi bi-pencil"></i> แก้ไข
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        searchResults.innerHTML = html;
+        searchResults.style.display = 'block';
+    }
+
+    function hideSearchResults() {
+        searchResults.style.display = 'none';
+    }
+
+    function selectProduct(productId) {
+        // Highlight the product in the table
+        const row = tableBody.querySelector(`tr[data-product-id="${productId}"]`);
+        if (row) {
+            // Scroll to the row
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Add highlight effect
+            row.classList.add('highlight');
+            setTimeout(() => {
+                row.classList.remove('highlight');
+            }, 2000);
+        }
+        
+        hideSearchResults();
+    }
+
+    // Make selectProduct available globally
+    window.selectProduct = selectProduct;
+
+    function filterLocalResults(query) {
+        const searchTerm = query.toLowerCase();
+        const stockFilterValue = stockFilter.value;
+        const sortValue = sortBy.value;
+
+        // Filter rows
+        let filteredRows = originalRows.filter(row => {
+            const name = row.dataset.name || '';
+            const flavor = row.dataset.flavor || '';
+            const barcode = row.dataset.barcode || '';
+            const stock = parseInt(row.dataset.stock) || 0;
+
+            // Search filter
+            const matchesSearch = !searchTerm || 
+                name.includes(searchTerm) || 
+                flavor.includes(searchTerm) || 
+                barcode.includes(searchTerm);
+
+            // Stock filter
+            let matchesStock = true;
+            if (stockFilterValue) {
+                switch (stockFilterValue) {
+                    case 'good': matchesStock = stock >= 20; break;
+                    case 'low': matchesStock = stock >= 10 && stock < 20; break;
+                    case 'critical': matchesStock = stock < 10 && stock > 0; break;
+                    case 'out': matchesStock = stock === 0; break;
+                }
+            }
+
+            return matchesSearch && matchesStock;
+        });
+
+        // Sort rows
+        filteredRows.sort((a, b) => {
+            switch (sortValue) {
+                case 'name':
+                    return (a.dataset.name || '').localeCompare(b.dataset.name || '');
+                case 'stock_asc':
+                    return parseInt(a.dataset.stock) - parseInt(b.dataset.stock);
+                case 'stock_desc':
+                    return parseInt(b.dataset.stock) - parseInt(a.dataset.stock);
+                case 'price_desc':
+                    return parseFloat(b.dataset.price) - parseFloat(a.dataset.price);
+                default:
+                    return 0;
+            }
+        });
+
+        // Update table
+        tableBody.innerHTML = '';
+        if (filteredRows.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="10" class="text-center py-4">
+                        <div class="text-muted">
+                            <i class="bi bi-search fs-2"></i>
+                            <p class="mt-2">ไม่พบสินค้าที่ตรงกับเงื่อนไข</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else {
+            filteredRows.forEach(row => tableBody.appendChild(row));
+        }
+    }
+
+    // Event listeners for filters
+    stockFilter.addEventListener('change', function() {
+        filterLocalResults(searchInput.value);
+    });
+    
+    sortBy.addEventListener('change', function() {
+        filterLocalResults(searchInput.value);
+    });
+
+    // Reset filters
+    window.resetFilters = function() {
+        searchInput.value = '';
+        stockFilter.value = '';
+        sortBy.value = 'name';
+        hideSearchResults();
+        filterLocalResults('');
+    };
+});
+</script>
+{% endblock %}

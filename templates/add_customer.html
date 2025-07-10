@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">เพิ่มลูกค้า</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+      <a href="{{ url_for('main.customers') }}" class="btn btn-sm btn-secondary"><i class="bi bi-arrow-left me-2"></i>กลับ</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="POST">
+      {{ csrf_token() }}
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="name" class="form-label">ชื่อลูกค้า <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="name" name="name" required>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="phone" class="form-label">เบอร์โทรศัพท์</label>
+            <input type="tel" class="form-control" id="phone" name="phone">
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="address" class="form-label">ที่อยู่</label>
+        <textarea class="form-control" id="address" name="address" rows="3"></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label for="line_id" class="form-label">Line ID</label>
+        <input type="text" class="form-control" id="line_id" name="line_id">
+      </div>
+
+      <div class="mt-3">
+        <button type="submit" class="btn btn-primary">บันทึกลูกค้า</button>
+        <a href="{{ url_for('main.customers') }}" class="btn btn-secondary">ยกเลิก</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

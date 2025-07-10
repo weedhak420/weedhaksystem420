@@ -1,0 +1,1098 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- หัวข้อและปุ่มกรองข้อมูล -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-2 pb-2 mb-4 border-bottom">
+        <h1 class="h2 fw-bold"><i class="bi bi-speedometer2 me-2"></i>แดชบอร์ด</h1>
+        <div class="btn-toolbar">
+            <div class="btn-group me-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-today">วันนี้</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-week">สัปดาห์นี้</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-month">เดือนนี้</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-year">ปีนี้</button>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary" id="btn-refresh">
+                <i class="bi bi-arrow-clockwise me-1"></i>รีเฟรช
+            </button>
+        </div>
+    </div>
+
+    <!-- แถบแสดงสถานะการอัปเดต -->
+    <div class="alert alert-success alert-dismissible fade d-none" role="alert" id="update-alert">
+        <i class="bi bi-check-circle-fill me-2"></i>อัปเดตข้อมูลล่าสุดเมื่อ <span id="last-update-time"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- บัตรสรุปข้อมูล -->
+    <div class="row g-3 mb-4">
+        <!-- ยอดขายรวม -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 rounded-4 shadow-sm h-100 dashboard-card">
+                <div class="card-body bg-gradient text-white position-relative overflow-hidden rounded-4" 
+                     style="background-color: #4e73df;">
+                    <div class="dashboard-card-icon">
+                        <i class="bi bi-cash-stack opacity-25"></i>
+                    </div>
+                    <div class="position-relative z-index-1">
+                        <div class="text-uppercase fw-light mb-1 small">ยอดขายรวม</div>
+                        <h3 class="fw-bold mb-0">฿{{ '{:,.2f}'.format(total_sales) }}</h3>
+                        <div class="mt-3 small" id="total-sales-change">
+                            <i class="bi bi-arrow-up me-1"></i><span>0%</span> จากเดือนที่แล้ว
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ยอดขายวันนี้ (Real-time) -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 rounded-4 shadow-sm h-100 dashboard-card">
+                <div class="card-body bg-gradient text-white position-relative overflow-hidden rounded-4" 
+                     style="background-color: #1cc88a;">
+                    <div class="dashboard-card-icon">
+                        <i class="bi bi-clock-history opacity-25"></i>
+                    </div>
+                    <div class="position-relative z-index-1">
+                        <div class="text-uppercase fw-light mb-1 small">ยอดขายวันนี้</div>
+                        <h3 class="fw-bold mb-0" id="today-sales">฿0.00</h3>
+                        <div class="mt-3 small">
+                            <span id="today-order-count">0</span> คำสั่งซื้อวันนี้
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- รอสลิป -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 rounded-4 shadow-sm h-100 dashboard-card">
+                <div class="card-body bg-gradient text-white position-relative overflow-hidden rounded-4" 
+                     style="background-color: #f6c23e;">
+                    <div class="dashboard-card-icon">
+                        <i class="bi bi-exclamation-circle opacity-25"></i>
+                    </div>
+                    <div class="position-relative z-index-1">
+                        <div class="text-uppercase fw-light mb-1 small">รอสลิป</div>
+                        <h3 class="fw-bold mb-0"><a href="#pending-orders-list" class="text-white text-decoration-none stretched-link">{{ pending_orders }}</a></h3>
+                        <div class="mt-3 small">
+                            คลิกเพื่อดูรายการ
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- สินค้าใกล้หมด -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 rounded-4 shadow-sm h-100 dashboard-card">
+                <div class="card-body bg-gradient text-white position-relative overflow-hidden rounded-4" 
+                     style="background-color: #e74a3b;">
+                    <div class="dashboard-card-icon">
+                        <i class="bi bi-box-seam opacity-25"></i>
+                    </div>
+                    <div class="position-relative z-index-1">
+                        <div class="text-uppercase fw-light mb-1 small">สินค้าใกล้หมด</div>
+                        <h3 class="fw-bold mb-0"><a href="#low-stock-list" class="text-white text-decoration-none stretched-link">{{ low_stock_products }}</a></h3>
+                        <div class="mt-3 small">
+                            คลิกเพื่อดูรายการ
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- กำไรรวม -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 rounded-4 shadow-sm h-100 dashboard-card">
+                <div class="card-body bg-gradient text-white position-relative overflow-hidden rounded-4" 
+                     style="background-color: #36b9cc;">
+                    <div class="dashboard-card-icon">
+                        <i class="bi bi-graph-up opacity-25"></i>
+                    </div>
+                    <div class="position-relative z-index-1">
+                        <div class="text-uppercase fw-light mb-1 small">กำไรรวม</div>
+                        <h3 class="fw-bold mb-0" id="total-profit">฿0.00</h3>
+                        <div class="mt-3 small" id="profit-change">
+                            <i class="bi bi-arrow-up me-1"></i><span>0%</span> จากเดือนที่แล้ว
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- อัตรากำไรเฉลี่ย -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 rounded-4 shadow-sm h-100 dashboard-card">
+                <div class="card-body bg-gradient text-white position-relative overflow-hidden rounded-4" 
+                     style="background-color: #6f42c1;">
+                    <div class="dashboard-card-icon">
+                        <i class="bi bi-percent opacity-25"></i>
+                    </div>
+                    <div class="position-relative z-index-1">
+                        <div class="text-uppercase fw-light mb-1 small">อัตรากำไรเฉลี่ย</div>
+                        <h3 class="fw-bold mb-0" id="avg-profit-margin">0%</h3>
+                        <div class="progress mt-3" style="height: 8px;">
+                            <div class="progress-bar bg-white" id="profit-margin-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- จำนวนสินค้าที่ขายไป -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 rounded-4 shadow-sm h-100 dashboard-card">
+                <div class="card-body bg-gradient text-white position-relative overflow-hidden rounded-4" 
+                     style="background-color: #fd7e14;">
+                    <div class="dashboard-card-icon">
+                        <i class="bi bi-box-seam opacity-25"></i>
+                    </div>
+                    <div class="position-relative z-index-1">
+                        <div class="text-uppercase fw-light mb-1 small">สินค้าขายไป</div>
+                        <h3 class="fw-bold mb-0" id="total-units-sold">0 ชิ้น</h3>
+                        <div class="mt-3 small" id="units-change">
+                            <i class="bi bi-arrow-up me-1"></i><span>0%</span> จากเดือนที่แล้ว
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ต้นทุนรวม -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 rounded-4 shadow-sm h-100 dashboard-card">
+                <div class="card-body bg-gradient text-white position-relative overflow-hidden rounded-4" 
+                     style="background-color: #5a5c69;">
+                    <div class="dashboard-card-icon">
+                        <i class="bi bi-currency-dollar opacity-25"></i>
+                    </div>
+                    <div class="position-relative z-index-1">
+                        <div class="text-uppercase fw-light mb-1 small">ต้นทุนรวม</div>
+                        <h3 class="fw-bold mb-0" id="total-cost">฿0.00</h3>
+                        <div class="mt-3 small" id="cost-percentage">
+                            <span>0%</span> ของยอดขาย
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4" id="low-stock-list">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>รายการสินค้าใกล้หมด</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>สินค้า</th>
+                            <th>รสชาติ</th>
+                            <th>สต็อกคงเหลือ</th>
+                            <th>การดำเนินการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in low_stock_products_list %}
+                        <tr>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.flavor }}</td>
+                            <td>
+                                <span class="badge {% if product.stock < 5 %}bg-danger{% else %}bg-warning{% endif %}">
+                                    {{ product.stock }} ชิ้น
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('main.inventory') }}?product_id={{ product.id }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-plus-circle me-1"></i>เพิ่มสต็อก
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-3">ไม่มีสินค้าใกล้หมด</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- การวิเคราะห์ต้นทุนและกำไร -->
+        <div class="col-md-6">
+            <div class="card border-0 rounded-4 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-pie-chart-fill me-2 text-primary"></i>การวิเคราะห์ต้นทุนและกำไร</h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="profitPeriodDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            ช่วงเวลา
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profitPeriodDropdown">
+                            <li><a class="dropdown-item profit-period" href="#" data-period="day">วันนี้</a></li>
+                            <li><a class="dropdown-item profit-period" href="#" data-period="week">สัปดาห์นี้</a></li>
+                            <li><a class="dropdown-item profit-period" href="#" data-period="month">เดือนนี้</a></li>
+                            <li><a class="dropdown-item profit-period" href="#" data-period="year">ปีนี้</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="position-relative">
+                                <canvas id="profitAnalysisChart" height="260"></canvas>
+                                <div id="profit-center-text" class="text-center position-absolute" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                                    <div id="profit-percent" class="h3 mb-0 fw-bold text-primary">0%</div>
+                                    <div class="small text-muted">อัตรากำไร</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="table-responsive">
+                                <table class="table table-borderless align-middle">
+                                    <tbody id="profit-analysis-table">
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="rounded-circle me-2" style="width: 12px; height: 12px; background-color: #4e73df;"></div>
+                                                    <div>ยอดขายรวม</div>
+                                                </div>
+                                            </td>
+                                            <td class="text-end fw-bold" id="table-total-sales">0.00</td>
+                                            <td class="text-end text-muted">100%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="rounded-circle me-2" style="width: 12px; height: 12px; background-color: #e74a3b;"></div>
+                                                    <div>ต้นทุนรวม</div>
+                                                </div>
+                                            </td>
+                                            <td class="text-end fw-bold" id="table-total-cost">0.00</td>
+                                            <td class="text-end text-muted" id="table-cost-percentage">0%</td>
+                                        </tr>
+                                        <tr class="border-top">
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="rounded-circle me-2" style="width: 12px; height: 12px; background-color: #1cc88a;"></div>
+                                                    <div>กำไรรวม</div>
+                                                </div>
+                                            </td>
+                                            <td class="text-end fw-bold" id="table-total-profit">0.00</td>
+                                            <td class="text-end text-success fw-semibold" id="table-profit-percentage">0%</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="d-grid gap-2 mt-3">
+                                <a href="/reports/sales_trend" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-file-earmark-bar-graph me-1"></i>ดูรายงานกำไรโดยละเอียด
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- กราฟยอดขายรายชั่วโมง (Real-time) -->
+        <div class="col-md-6">
+            <div class="card border-0 rounded-4 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-success"></i>ยอดขายรายชั่วโมง (วันนี้)</h5>
+                    <div>
+                        <span class="badge bg-success me-2" id="today-sales-total">฿0.00</span>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="hourly-line">
+                                <i class="bi bi-graph-up"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="hourly-bar">
+                                <i class="bi bi-bar-chart"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="position-relative">
+                        <canvas id="hourlySalesChart" height="260"></canvas>
+                        <div id="no-sales-overlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-light bg-opacity-75 rounded d-none">
+                            <div class="text-center text-muted">
+                                <i class="bi bi-info-circle fs-3"></i>
+                                <p class="mt-2">ยังไม่มีข้อมูลยอดขายสำหรับวันนี้</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- กราฟยอดขายรายเดือน (Historical) -->
+        <div class="col-lg-8">
+            <div class="card border-0 rounded-4 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-graph-up me-2 text-info"></i>ยอดขายรายเดือน</h5>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-secondary active" id="sales-vs-last-year">เปรียบเทียบปีที่แล้ว</button>
+                        <button class="btn btn-sm btn-outline-secondary" id="sales-vs-target">เปรียบเทียบเป้าหมาย</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlySalesChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- สินค้าขายดี (จำนวนหน่วย) -->
+        <div class="col-lg-4">
+            <div class="card border-0 rounded-4 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-trophy me-2 text-warning"></i>สินค้าขายดี</h5>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="topProductsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            จำนวนหน่วย
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="topProductsDropdown">
+                            <li><a class="dropdown-item top-products-view active" href="#" data-view="units">จำนวนหน่วย</a></li>
+                            <li><a class="dropdown-item top-products-view" href="#" data-view="revenue">ยอดเงิน</a></li>
+                            <li><a class="dropdown-item top-products-view" href="#" data-view="profit">กำไร</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="position-relative">
+                        <canvas id="topProductsChart" height="200"></canvas>
+                    </div>
+                    <div class="mt-3">
+                        <ul class="list-group list-group-flush" id="top-products-list">
+                            <!-- จะถูกเติมด้วย JavaScript -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- คำสั่งซื้อล่าสุด -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 rounded-4 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-receipt me-2 text-primary"></i>คำสั่งซื้อล่าสุด</h5>
+                    <a href="{{ url_for('main.orders') }}" class="btn btn-sm btn-primary">ดูทั้งหมด</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-3">รหัส</th>
+                                    <th>ลูกค้า</th>
+                                    <th>วันที่</th>
+                                    <th>สถานะ</th>
+                                    <th>จำนวนสินค้า</th>
+                                    <th class="text-end">ยอดรวม</th>
+                                    <th class="text-end pe-3">การชำระเงิน</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in recent_orders %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <span class="fw-medium">{{ order.id }}</span>
+                                    </td>
+                                    <td>
+                                        {% if order.customer %}
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle me-2 bg-primary text-white">
+                                                {{ order.customer.name[:1] | upper }}
+                                            </div>
+                                            <div>{{ order.customer.name }}</div>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">ไม่ระบุ</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.order_date.strftime('%d/%m/%Y %H:%M') if order.order_date else 'ไม่ระบุ' }}</td>
+                                    <td>
+                                        {% if order.status == 'completed' %}
+                                        <span class="badge rounded-pill bg-success">เสร็จสิ้น</span>
+                                        {% elif order.status == 'pending' %}
+                                        <span class="badge rounded-pill bg-warning text-dark">รอดำเนินการ</span>
+                                        {% elif order.status == 'cancelled' %}
+                                        <span class="badge rounded-pill bg-danger">ยกเลิก</span>
+                                        {% else %}
+                                        <span class="badge rounded-pill bg-secondary">ไม่ระบุ</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.item_count if order.item_count else 0 }} รายการ</td>
+                                    <td class="text-end fw-bold">฿{{ '{:,.2f}'.format(order.total_amount) if order.total_amount else '0.00' }}</td>
+                                    <td class="text-end pe-3">
+                                        {% if order.payment_slip %}
+                                        <span class="badge bg-success rounded-pill">
+                                            <i class="bi bi-check-circle me-1"></i>มีสลิป
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-warning text-dark rounded-pill">
+                                            <i class="bi bi-exclamation-circle me-1"></i>รอสลิป
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('main.view_order', id=order.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                                            ยังไม่มีคำสั่งซื้อ
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* สไตล์เพิ่มเติมสำหรับ Dashboard */
+.dashboard-card .dashboard-card-icon {
+    position: absolute;
+    right: -10px;
+    bottom: -20px;
+    font-size: 5rem;
+    z-index: 0;
+}
+
+.z-index-1 {
+    z-index: 1;
+}
+
+.avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.top-product-item .top-product-number {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+/* Animation for refresh */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js failed to load');
+        alert('ไม่สามารถโหลด Chart.js ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
+        return;
+    }
+    
+    // ตั้งค่าสีทั่วไปสำหรับกราฟทั้งหมด
+    const chartColors = {
+        primary: '#4e73df',
+        success: '#1cc88a',
+        info: '#36b9cc',
+        warning: '#f6c23e',
+        danger: '#e74a3b',
+        secondary: '#858796',
+        light: '#f8f9fc',
+        dark: '#5a5c69'
+    };
+    
+    // กำหนดตัวแปรสำหรับเก็บ instance ของกราฟ
+    let profitAnalysisChart;
+    let hourlySalesChart;
+    let monthlySalesChart;
+    let topProductsChart;
+    
+    // ตัวแปรสำหรับเก็บ timer ของ auto-refresh
+    let refreshTimer;
+    
+    // ตัวแปรสำหรับเก็บการตั้งค่าปัจจุบัน
+    let currentSettings = {
+        period: 'day', // day, week, month, year
+        topProductsView: 'units', // units, revenue, profit
+        hourlySalesType: 'line', // line, bar
+        monthlySalesCompare: 'last-year' // last-year, target
+    };
+    
+    // ฟังก์ชั่นสำหรับอัปเดตข้อมูลแดชบอร์ดทั้งหมด
+    function updateDashboard(showAlert = true) {
+        // แสดง spinner บนปุ่ม refresh
+        const refreshBtn = document.getElementById('btn-refresh');
+        const refreshIcon = refreshBtn.querySelector('i');
+        if (refreshIcon) {
+            refreshIcon.classList.add('spin');
+        }
+        
+        // สร้าง URL พร้อมพารามิเตอร์การตั้งค่า
+        const url = `{{ url_for('main.realtime_data') }}?period=${currentSettings.period}`;
+        
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // อัปเดตข้อมูลยอดขายรวม
+                const totalSalesChangeElement = document.getElementById('total-sales-change');
+                if (totalSalesChangeElement) {
+                    totalSalesChangeElement.innerHTML = `
+                        <i class="bi bi-arrow-${data.sales_change >= 0 ? 'up' : 'down'} me-1"></i>
+                        <span>${Math.abs(data.sales_change).toFixed(1)}%</span> จากเดือนที่แล้ว
+                    `;
+                }
+                
+                // อัปเดตยอดขายวันนี้
+                const todaySalesElement = document.getElementById('today-sales');
+                if (todaySalesElement) {
+                    todaySalesElement.textContent = `฿${data.today_sales.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                }
+                const todayOrderCountElement = document.getElementById('today-order-count');
+                if (todayOrderCountElement) {
+                    todayOrderCountElement.textContent = data.today_order_count;
+                }
+                const todaySalesTotalElement = document.getElementById('today-sales-total');
+                if (todaySalesTotalElement) {
+                    todaySalesTotalElement.textContent = `฿${data.today_sales.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                }
+                
+                // อัปเดตกำไรรวม
+                const totalProfitElement = document.getElementById('total-profit');
+                if (totalProfitElement) {
+                    totalProfitElement.textContent = `฿${data.total_profit.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                }
+                const profitChangeElement = document.getElementById('profit-change');
+                if (profitChangeElement) {
+                    profitChangeElement.innerHTML = `
+                        <i class="bi bi-arrow-${data.profit_change >= 0 ? 'up' : 'down'} me-1"></i>
+                        <span>${Math.abs(data.profit_change).toFixed(1)}%</span> จากเดือนที่แล้ว
+                    `;
+                }
+                
+                // อัปเดตอัตรากำไรเฉลี่ย
+                const avgProfitMargin = data.avg_profit_margin.toFixed(1);
+                const avgProfitMarginElement = document.getElementById('avg-profit-margin');
+                if (avgProfitMarginElement) {
+                    avgProfitMarginElement.textContent = `${avgProfitMargin}%`;
+                }
+                const profitMarginBarElement = document.getElementById('profit-margin-bar');
+                if (profitMarginBarElement) {
+                    profitMarginBarElement.style.width = `${avgProfitMargin}%`;
+                }
+                
+                // อัปเดตจำนวนสินค้าที่ขายไป
+                const totalUnitsSoldElement = document.getElementById('total-units-sold');
+                if (totalUnitsSoldElement) {
+                    totalUnitsSoldElement.textContent = `${data.total_units_sold.toLocaleString('th-TH')} ชิ้น`;
+                }
+                const unitsChangeElement = document.getElementById('units-change');
+                if (unitsChangeElement) {
+                    unitsChangeElement.innerHTML = `
+                        <i class="bi bi-arrow-${data.units_change >= 0 ? 'up' : 'down'} me-1"></i>
+                        <span>${Math.abs(data.units_change).toFixed(1)}%</span> จากเดือนที่แล้ว
+                    `;
+                }
+                
+                // อัปเดตต้นทุนรวม
+                const totalCostElement = document.getElementById('total-cost');
+                if (totalCostElement) {
+                    totalCostElement.textContent = `฿${data.total_cost.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                }
+                const costPercentageElement = document.getElementById('cost-percentage');
+                if (costPercentageElement) {
+                    costPercentageElement.innerHTML = `
+                        <span>${data.cost_percentage.toFixed(1)}%</span> ของยอดขาย
+                    `;
+                }
+                
+                // อัปเดตการวิเคราะห์ต้นทุนและกำไร
+                updateProfitAnalysisChart(data.profit_analysis);
+                
+                // อัปเดตยอดขายรายชั่วโมง
+                updateHourlySalesChart(data.hourly_sales);
+                
+                // อัปเดตยอดขายรายเดือน
+                updateMonthlySalesChart(data.monthly_sales);
+                
+                // อัปเดตสินค้าขายดี
+                updateTopProductsChart(data.top_products);
+                
+                // แสดงเวลาอัปเดตล่าสุด
+                const lastUpdateTimeElement = document.getElementById('last-update-time');
+                if (lastUpdateTimeElement) {
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString('th-TH');
+                    lastUpdateTimeElement.textContent = timeString;
+                }
+                
+                // แสดง Alert ว่าอัปเดตข้อมูลแล้ว
+                if (showAlert) {
+                    const alertElement = document.getElementById('update-alert');
+                    if (alertElement) {
+                        alertElement.classList.remove('d-none');
+                        alertElement.classList.add('show');
+                        
+                        // ซ่อน Alert หลังจาก 5 วินาที
+                        setTimeout(() => {
+                            alertElement.classList.remove('show');
+                            alertElement.classList.add('d-none');
+                        }, 5000);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error updating dashboard:', error);
+                alert(`เกิดข้อผิดพลาดในการอัปเดตข้อมูล: ${error.message}`);
+            })
+            .finally(() => {
+                // ซ่อน spinner บนปุ่ม refresh
+                if (refreshIcon) {
+                    refreshIcon.classList.remove('spin');
+                }
+            });
+    }
+    
+    // ฟังก์ชั่นสำหรับอัปเดตการวิเคราะห์ต้นทุนและกำไร
+    function updateProfitAnalysisChart(data) {
+        // อัปเดตข้อมูลในตาราง
+        document.getElementById('table-total-sales').textContent = data.total_sales.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('table-total-cost').textContent = data.total_cost.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('table-total-profit').textContent = data.total_profit.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        const costPercentage = ((data.total_cost / data.total_sales) * 100).toFixed(1);
+        const profitPercentage = ((data.total_profit / data.total_sales) * 100).toFixed(1);
+        
+        document.getElementById('table-cost-percentage').textContent = `${costPercentage}%`;
+        document.getElementById('table-profit-percentage').textContent = `${profitPercentage}%`;
+        document.getElementById('profit-percent').textContent = `${profitPercentage}%`;
+        
+        // สร้างหรืออัปเดตกราฟ
+        const ctx = document.getElementById('profitAnalysisChart').getContext('2d');
+        
+        if (profitAnalysisChart) {
+            profitAnalysisChart.data.datasets[0].data = [data.total_cost, data.total_profit];
+            profitAnalysisChart.update();
+        } else {
+            profitAnalysisChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ต้นทุน', 'กำไร'],
+                    datasets: [{
+                        data: [data.total_cost, data.total_profit],
+                        backgroundColor: [chartColors.danger, chartColors.success],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const percentage = ((value / (data.total_cost + data.total_profit)) * 100).toFixed(1);
+                                    return `${context.label}: ฿${value.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // ฟังก์ชั่นสำหรับอัปเดตกราฟยอดขายรายชั่วโมง
+    function updateHourlySalesChart(data) {
+        const ctx = document.getElementById('hourlySalesChart').getContext('2d');
+        const noSalesOverlay = document.getElementById('no-sales-overlay');
+        
+        // ตรวจสอบว่ามีข้อมูลหรือไม่
+        const hasData = data.values.some(value => value > 0);
+        noSalesOverlay.classList.toggle('d-none', hasData);
+        
+        // สร้างหรืออัปเดตกราฟ
+        if (hourlySalesChart) {
+            hourlySalesChart.data.labels = data.labels;
+            hourlySalesChart.data.datasets[0].data = data.values;
+            hourlySalesChart.update();
+        } else {
+            hourlySalesChart = new Chart(ctx, {
+                type: currentSettings.hourlySalesType,
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'ยอดขาย (บาท)',
+                        data: data.values,
+                        backgroundColor: hexToRgba(chartColors.success, 0.2),
+                        borderColor: chartColors.success,
+                        borderWidth: 2,
+                        pointBackgroundColor: chartColors.success,
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '฿' + value.toLocaleString('th-TH');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `ยอดขาย: ฿${context.raw.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // ฟังก์ชั่นสำหรับอัปเดตกราฟยอดขายรายเดือน
+    function updateMonthlySalesChart(data) {
+        const ctx = document.getElementById('monthlySalesChart').getContext('2d');
+        
+        // กำหนดชุดข้อมูลตามการเปรียบเทียบที่เลือก
+        let datasets = [];
+        
+        if (currentSettings.monthlySalesCompare === 'last-year') {
+            datasets = [
+                {
+                    label: 'ปีนี้',
+                    data: data.current_year,
+                    backgroundColor: hexToRgba(chartColors.primary, 0.2),
+                    borderColor: chartColors.primary,
+                    borderWidth: 2,
+                    tension: 0.1
+                },
+                {
+                    label: 'ปีที่แล้ว',
+                    data: data.last_year,
+                    backgroundColor: 'transparent',
+                    borderColor: chartColors.secondary,
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    tension: 0.1
+                }
+            ];
+        } else {
+            datasets = [
+                {
+                    label: 'ยอดขายจริง',
+                    data: data.current_year,
+                    backgroundColor: hexToRgba(chartColors.primary, 0.2),
+                    borderColor: chartColors.primary,
+                    borderWidth: 2,
+                    tension: 0.1
+                },
+                {
+                    label: 'เป้าหมาย',
+                    data: data.target,
+                    backgroundColor: 'transparent',
+                    borderColor: chartColors.warning,
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    tension: 0.1
+                }
+            ];
+        }
+        
+        // สร้างหรืออัปเดตกราฟ
+        if (monthlySalesChart) {
+            monthlySalesChart.data.labels = data.labels;
+            monthlySalesChart.data.datasets = datasets;
+            monthlySalesChart.update();
+        } else {
+            monthlySalesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '฿' + value.toLocaleString('th-TH');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ฿${context.raw.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // ฟังก์ชั่นสำหรับอัปเดตกราฟสินค้าขายดี
+    function updateTopProductsChart(data) {
+        const ctx = document.getElementById('topProductsChart').getContext('2d');
+        const listElement = document.getElementById('top-products-list');
+        
+        // ล้าง list เดิม
+        listElement.innerHTML = '';
+        
+        // เลือกชุดข้อมูลตาม view ที่เลือก
+        let selectedData;
+        let labelPrefix;
+        
+        if (currentSettings.topProductsView === 'units') {
+            selectedData = data.by_units;
+            labelPrefix = '';
+        } else if (currentSettings.topProductsView === 'revenue') {
+            selectedData = data.by_revenue;
+            labelPrefix = '฿';
+        } else {
+            selectedData = data.by_profit;
+            labelPrefix = '฿';
+        }
+        
+        // สร้างรายการสินค้าขายดี
+        selectedData.forEach((item, index) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item py-2 px-3';
+            
+            const colorClass = index < 3 ? ['bg-warning', 'bg-secondary', 'bg-info'][index] : 'bg-light text-dark';
+            
+            let valueDisplay = currentSettings.topProductsView === 'units' 
+                ? `${item.value.toLocaleString('th-TH')} ชิ้น`
+                : `฿${item.value.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            
+            li.innerHTML = `
+                <div class="d-flex align-items-center top-product-item">
+                    <div class="top-product-number me-2 ${colorClass} text-white">${index + 1}</div>
+                    <div class="flex-grow-1 text-truncate">${item.name}</div>
+                    <div class="ms-auto fw-medium">${valueDisplay}</div>
+                </div>
+            `;
+            
+            listElement.appendChild(li);
+        });
+        
+        // สร้างหรืออัปเดตกราฟ
+        if (topProductsChart) {
+            topProductsChart.data.labels = selectedData.map(item => item.name);
+            topProductsChart.data.datasets[0].data = selectedData.map(item => item.value);
+            topProductsChart.update();
+        } else {
+            topProductsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: selectedData.map(item => item.name),
+                    datasets: [{
+                        label: currentSettings.topProductsView === 'units' ? 'จำนวนหน่วย' : 'ยอดเงิน',
+                        data: selectedData.map(item => item.value),
+                        backgroundColor: [
+                            chartColors.warning,
+                            chartColors.secondary,
+                            chartColors.info,
+                            hexToRgba(chartColors.primary, 0.7),
+                            hexToRgba(chartColors.success, 0.7)
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return currentSettings.topProductsView === 'units' 
+                                        ? value.toLocaleString('th-TH')
+                                        : '฿' + value.toLocaleString('th-TH');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (currentSettings.topProductsView === 'units') {
+                                        return `จำนวน: ${context.raw.toLocaleString('th-TH')} ชิ้น`;
+                                    } else {
+                                        return `${context.dataset.label}: ฿${context.raw.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // ฟังก์ชั่นช่วยแปลงสี HEX เป็น RGBA
+    function hexToRgba(hex, alpha = 1) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    
+    // ตั้ง Event Listeners
+    
+    // ปุ่มช่วงเวลา
+    document.getElementById('btn-today').addEventListener('click', function() {
+        currentSettings.period = 'day';
+        updateDashboard();
+    });
+    
+    document.getElementById('btn-week').addEventListener('click', function() {
+        currentSettings.period = 'week';
+        updateDashboard();
+    });
+    
+    document.getElementById('btn-month').addEventListener('click', function() {
+        currentSettings.period = 'month';
+        updateDashboard();
+    });
+    
+    document.getElementById('btn-year').addEventListener('click', function() {
+        currentSettings.period = 'year';
+        updateDashboard();
+    });
+    
+    // ปุ่มรีเฟรช
+    document.getElementById('btn-refresh').addEventListener('click', function() {
+        updateDashboard();
+    });
+    
+    // เมนูช่วงเวลาสำหรับการวิเคราะห์กำไร
+    document.querySelectorAll('.profit-period').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            currentSettings.period = this.dataset.period;
+            document.getElementById('profitPeriodDropdown').textContent = this.textContent;
+            updateDashboard();
+        });
+    });
+    
+    // เมนูมุมมองสินค้าขายดี
+    document.querySelectorAll('.top-products-view').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            // ลบ active จากทุกรายการ
+            document.querySelectorAll('.top-products-view').forEach(i => i.classList.remove('active'));
+            // เพิ่ม active ให้รายการที่เลือก
+            this.classList.add('active');
+            
+            currentSettings.topProductsView = this.dataset.view;
+            document.getElementById('topProductsDropdown').textContent = this.textContent;
+            updateDashboard();
+        });
+    });
+    
+    // ปุ่มสลับประเภทกราฟยอดขายรายชั่วโมง
+    document.getElementById('hourly-line').addEventListener('click', function() {
+        currentSettings.hourlySalesType = 'line';
+        if (hourlySalesChart) {
+            hourlySalesChart.config.type = 'line';
+            hourlySalesChart.update();
+        }
+    });
+    
+    document.getElementById('hourly-bar').addEventListener('click', function() {
+        currentSettings.hourlySalesType = 'bar';
+        if (hourlySalesChart) {
+            hourlySalesChart.config.type = 'bar';
+            hourlySalesChart.update();
+        }
+    });
+    
+    // ปุ่มสลับการเปรียบเทียบยอดขายรายเดือน
+    document.getElementById('sales-vs-last-year').addEventListener('click', function() {
+        currentSettings.monthlySalesCompare = 'last-year';
+        document.getElementById('sales-vs-last-year').classList.add('active');
+        document.getElementById('sales-vs-target').classList.remove('active');
+        updateDashboard();
+    });
+    
+    document.getElementById('sales-vs-target').addEventListener('click', function() {
+        currentSettings.monthlySalesCompare = 'target';
+        document.getElementById('sales-vs-target').classList.add('active');
+        document.getElementById('sales-vs-last-year').classList.remove('active');
+        updateDashboard();
+    });
+    
+    // เริ่มต้นโหลดข้อมูลแดชบอร์ด
+    updateDashboard(false);
+    
+    // ตั้งเวลาอัพเดทข้อมูลอัตโนมัติทุก 5 นาที
+    refreshTimer = setInterval(() => {
+        updateDashboard(false);
+    }, 5 * 60 * 1000);
+});
+</script>
+{% endblock %}
+

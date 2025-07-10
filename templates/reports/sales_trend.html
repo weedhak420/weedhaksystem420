@@ -1,0 +1,668 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2"><i class="bi bi-graph-up me-2"></i>แนวโน้มยอดขาย</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+      <a href="{{ url_for('main.reports') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>กลับไปยังรายงาน
+      </a>
+      <button class="btn btn-sm btn-primary ms-2" onclick="refreshData()">
+        <i class="bi bi-arrow-clockwise me-2"></i>รีเฟรชข้อมูล
+      </button>
+  </div>
+</div>
+
+<!-- Loading Alert -->
+<div class="alert alert-info d-none" id="loading-alert">
+  <div class="d-flex align-items-center">
+    <div class="spinner-border spinner-border-sm me-2" role="status">
+      <span class="visually-hidden">กำลังโหลด...</span>
+    </div>
+    <div>กำลังโหลดข้อมูลจากฐานข้อมูล กรุณารอสักครู่...</div>
+  </div>
+</div>
+
+<!-- Error Alert -->
+<div class="alert alert-danger d-none" id="error-alert">
+  <div class="d-flex align-items-center">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <div id="error-message">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card bg-primary text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="card-title">ยอดขายวันนี้</h6>
+            <h4 id="today-sales">฿0.00</h4>
+          </div>
+          <div class="align-self-center">
+            <i class="bi bi-currency-dollar fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-success text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="card-title">ยอดขาย 30 วัน</h6>
+            <h4 id="month-sales">฿0.00</h4>
+          </div>
+          <div class="align-self-center">
+            <i class="bi bi-graph-up fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-info text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="card-title">ยอดขายเฉลี่ย/วัน</h6>
+            <h4 id="avg-daily-sales">฿0.00</h4>
+          </div>
+          <div class="align-self-center">
+            <i class="bi bi-bar-chart fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card bg-warning text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="card-title">แนวโน้ม</h6>
+            <h4 id="trend-indicator">
+              <i class="bi bi-arrow-up"></i> +0%
+            </h4>
+          </div>
+          <div class="align-self-center">
+            <i class="bi bi-trending-up fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Daily Sales Trend Chart -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>แนวโน้มยอดขายรายวัน (30 วันที่ผ่านมา)</h5>
+      <small class="text-muted">ข้อมูลจากคำสั่งซื้อที่ชำระเงินแล้ว</small>
+  </div>
+  <div class="card-body">
+      <div class="chart-container" style="position: relative; height: 300px;">
+        <canvas id="dailySalesChart"></canvas>
+      </div>
+  </div>
+</div>
+
+<!-- Weekly and Hourly Analysis -->
+<div class="row">
+  <div class="col-md-6">
+      <div class="card mb-4">
+          <div class="card-header">
+              <h5 class="mb-0"><i class="bi bi-calendar-week me-2"></i>ยอดขายตามวันในสัปดาห์</h5>
+              <small class="text-muted">เฉลี่ยจากข้อมูล 12 สัปดาห์ที่ผ่านมา</small>
+          </div>
+          <div class="card-body">
+              <div class="chart-container" style="position: relative; height: 300px;">
+                <canvas id="weekdaySalesChart"></canvas>
+              </div>
+          </div>
+      </div>
+  </div>
+  <div class="col-md-6">
+      <div class="card mb-4">
+          <div class="card-header">
+              <h5 class="mb-0"><i class="bi bi-clock me-2"></i>ยอดขายตามช่วงเวลา</h5>
+              <small class="text-muted">เฉลี่ยจากข้อมูล 30 วันที่ผ่านมา</small>
+          </div>
+          <div class="card-body">
+              <div class="chart-container" style="position: relative; height: 300px;">
+                <canvas id="hourlySalesChart"></canvas>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>
+
+<!-- Sales Forecast -->
+<div class="card">
+  <div class="card-header">
+      <h5 class="mb-0"><i class="bi bi-crystal-ball me-2"></i>การคาดการณ์ยอดขาย</h5>
+      <small class="text-muted">ใช้ข้อมูลประวัติศาสตร์และแนวโน้มในการคาดการณ์</small>
+  </div>
+  <div class="card-body">
+      <div class="row">
+          <div class="col-md-8">
+              <div class="chart-container" style="position: relative; height: 400px;">
+                <canvas id="forecastChart"></canvas>
+              </div>
+          </div>
+          <div class="col-md-4">
+              <div class="card bg-light">
+                  <div class="card-body">
+                      <h6 class="card-title"><i class="bi bi-graph-up-arrow me-2"></i>คาดการณ์เดือนถัดไป</h6>
+                      <h3 class="text-primary" id="forecast-next-month">฿0.00</h3>
+                      <p class="text-muted" id="forecast-change">
+                        <i class="bi bi-arrow-up"></i> เพิ่มขึ้น 0% จากเดือนนี้
+                      </p>
+                      
+                      <hr>
+                      
+                      <h6 class="card-title"><i class="bi bi-star me-2"></i>สินค้าที่คาดว่าจะขายดี</h6>
+                      <div id="forecast-top-products">
+                          <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            <small>กำลังวิเคราะห์ข้อมูล...</small>
+                          </div>
+                      </div>
+                      
+                      <hr>
+                      
+                      <div class="text-center">
+                        <small class="text-muted">
+                          <i class="bi bi-info-circle me-1"></i>
+                          การคาดการณ์อิงจากข้อมูลยอดขายและแนวโน้มการเติบโต
+                        </small>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script>
+let dailySalesChart, weekdaySalesChart, hourlySalesChart, forecastChart;
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadSalesTrendData();
+});
+
+function refreshData() {
+  loadSalesTrendData();
+}
+
+function loadSalesTrendData() {
+  // Show loading alert
+  document.getElementById('loading-alert').classList.remove('d-none');
+  document.getElementById('error-alert').classList.add('d-none');
+  
+  // Fetch sales trend data
+  fetch('/api/sales_trend')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      // Hide loading alert
+      document.getElementById('loading-alert').classList.add('d-none');
+      
+      console.log('Sales trend data loaded:', data);
+      
+      // Update summary cards
+      updateSummaryCards(data);
+      
+      // Create charts
+      createDailySalesChart(data.daily_dates, data.daily_sales);
+      createWeekdaySalesChart(data.weekday_sales);
+      createHourlySalesChart(data.hourly_sales);
+      createForecastChart(data.forecast_dates, data.actual_sales, data.forecast_sales);
+      
+      // Update forecast information
+      updateForecastInfo(data.forecast_next_month, data.forecast_change_percentage, data.forecast_top_products);
+    })
+    .catch(error => {
+      console.error('Error fetching sales trend:', error);
+      document.getElementById('loading-alert').classList.add('d-none');
+      document.getElementById('error-alert').classList.remove('d-none');
+      document.getElementById('error-message').textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message;
+    });
+}
+
+function updateSummaryCards(data) {
+  try {
+    // Calculate today's sales (last item in daily sales)
+    const todaySales = data.daily_sales[data.daily_sales.length - 1] || 0;
+    document.getElementById('today-sales').textContent = '฿' + todaySales.toLocaleString('th-TH', {minimumFractionDigits: 2});
+    
+    // Calculate 30-day total
+    const monthTotal = data.daily_sales.reduce((sum, val) => sum + val, 0);
+    document.getElementById('month-sales').textContent = '฿' + monthTotal.toLocaleString('th-TH', {minimumFractionDigits: 2});
+    
+    // Calculate average daily sales
+    const avgDaily = monthTotal / data.daily_sales.length;
+    document.getElementById('avg-daily-sales').textContent = '฿' + avgDaily.toLocaleString('th-TH', {minimumFractionDigits: 2});
+    
+    // Calculate trend (compare last 7 days with previous 7 days)
+    const lastWeek = data.daily_sales.slice(-7).reduce((sum, val) => sum + val, 0);
+    const prevWeek = data.daily_sales.slice(-14, -7).reduce((sum, val) => sum + val, 0);
+    
+    let trendPercentage = 0;
+    let trendIcon = 'bi-arrow-right';
+    let trendClass = 'text-white';
+    
+    if (prevWeek > 0) {
+      trendPercentage = ((lastWeek - prevWeek) / prevWeek) * 100;
+      if (trendPercentage > 0) {
+        trendIcon = 'bi-arrow-up';
+        trendClass = 'text-white';
+      } else if (trendPercentage < 0) {
+        trendIcon = 'bi-arrow-down';
+        trendClass = 'text-white';
+      }
+    }
+    
+    document.getElementById('trend-indicator').innerHTML = 
+      `<i class="${trendIcon}"></i> ${trendPercentage >= 0 ? '+' : ''}${trendPercentage.toFixed(1)}%`;
+    
+  } catch (error) {
+    console.error('Error updating summary cards:', error);
+  }
+}
+
+function createDailySalesChart(dates, sales) {
+  const ctx = document.getElementById('dailySalesChart').getContext('2d');
+  
+  // Destroy existing chart if it exists
+  if (dailySalesChart) {
+    dailySalesChart.destroy();
+  }
+  
+  dailySalesChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: [{
+        label: 'ยอดขาย (บาท)',
+        data: sales,
+        borderColor: '#4e73df',
+        backgroundColor: 'rgba(78, 115, 223, 0.1)',
+        borderWidth: 3,
+        pointBackgroundColor: '#4e73df',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        fill: true,
+        tension: 0.2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '฿' + value.toLocaleString('th-TH');
+            }
+          },
+          grid: {
+            color: 'rgba(0,0,0,0.1)'
+          }
+        },
+        x: {
+          grid: {
+            color: 'rgba(0,0,0,0.1)'
+          }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return 'ยอดขาย: ฿' + context.raw.toLocaleString('th-TH', {minimumFractionDigits: 2});
+            }
+          },
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          titleColor: '#fff',
+          bodyColor: '#fff'
+        },
+        legend: {
+          display: false
+        }
+      },
+      animation: {
+        duration: 1000,
+        easing: 'easeInOutQuart'
+      }
+    }
+  });
+}
+
+function createWeekdaySalesChart(sales) {
+  const ctx = document.getElementById('weekdaySalesChart').getContext('2d');
+  
+  // Destroy existing chart if it exists
+  if (weekdaySalesChart) {
+    weekdaySalesChart.destroy();
+  }
+  
+  const weekdayLabels = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+  const colors = [
+    'rgba(78, 115, 223, 0.8)',
+    'rgba(28, 200, 138, 0.8)',
+    'rgba(54, 185, 204, 0.8)',
+    'rgba(246, 194, 62, 0.8)',
+    'rgba(231, 74, 59, 0.8)',
+    'rgba(111, 66, 193, 0.8)',
+    'rgba(253, 126, 20, 0.8)'
+  ];
+  
+  weekdaySalesChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: weekdayLabels,
+      datasets: [{
+        label: 'ยอดขายเฉลี่ย (บาท)',
+        data: sales,
+        backgroundColor: colors,
+        borderColor: colors.map(color => color.replace('0.8', '1')),
+        borderWidth: 2,
+        borderRadius: 8,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '฿' + value.toLocaleString('th-TH');
+            }
+          },
+          grid: {
+            color: 'rgba(0,0,0,0.1)'
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return 'ยอดขายเฉลี่ย: ฿' + context.raw.toLocaleString('th-TH', {minimumFractionDigits: 2});
+            }
+          },
+          backgroundColor: 'rgba(0,0,0,0.8)'
+        },
+        legend: {
+          display: false
+        }
+      },
+      animation: {
+        duration: 1200,
+        easing: 'easeInOutBounce'
+      }
+    }
+  });
+}
+
+function createHourlySalesChart(sales) {
+  const ctx = document.getElementById('hourlySalesChart').getContext('2d');
+  
+  // Destroy existing chart if it exists
+  if (hourlySalesChart) {
+    hourlySalesChart.destroy();
+  }
+  
+  const hourLabels = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+  
+  hourlySalesChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: hourLabels,
+      datasets: [{
+        label: 'ยอดขายเฉลี่ย (บาท)',
+        data: sales,
+        borderColor: '#1cc88a',
+        backgroundColor: 'rgba(28, 200, 138, 0.1)',
+        borderWidth: 3,
+        pointBackgroundColor: '#1cc88a',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '฿' + value.toLocaleString('th-TH');
+            }
+          },
+          grid: {
+            color: 'rgba(0,0,0,0.1)'
+          }
+        },
+        x: {
+          grid: {
+            color: 'rgba(0,0,0,0.1)'
+          }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return 'ยอดขายเฉลี่ย: ฿' + context.raw.toLocaleString('th-TH', {minimumFractionDigits: 2});
+            }
+          },
+          backgroundColor: 'rgba(0,0,0,0.8)'
+        },
+        legend: {
+          display: false
+        }
+      },
+      animation: {
+        duration: 1000,
+        easing: 'easeInOutQuart'
+      }
+    }
+  });
+}
+
+function createForecastChart(dates, actualSales, forecastSales) {
+  const ctx = document.getElementById('forecastChart').getContext('2d');
+  
+  // Destroy existing chart if it exists
+  if (forecastChart) {
+    forecastChart.destroy();
+  }
+  
+  forecastChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: [
+        {
+          label: 'ยอดขายจริง',
+          data: actualSales,
+          borderColor: '#4e73df',
+          backgroundColor: 'rgba(78, 115, 223, 0.1)',
+          borderWidth: 3,
+          pointBackgroundColor: '#4e73df',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          fill: true,
+          tension: 0.2
+        },
+        {
+          label: 'คาดการณ์',
+          data: forecastSales,
+          borderColor: '#f6c23e',
+          backgroundColor: 'rgba(246, 194, 62, 0.1)',
+          borderWidth: 3,
+          borderDash: [10, 5],
+          pointBackgroundColor: '#f6c23e',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          fill: true,
+          tension: 0.2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '฿' + value.toLocaleString('th-TH');
+            }
+          },
+          grid: {
+            color: 'rgba(0,0,0,0.1)'
+          }
+        },
+        x: {
+          grid: {
+            color: 'rgba(0,0,0,0.1)'
+          }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              if (context.raw === null) return '';
+              return context.dataset.label + ': ฿' + context.raw.toLocaleString('th-TH', {minimumFractionDigits: 2});
+            }
+          },
+          backgroundColor: 'rgba(0,0,0,0.8)'
+        },
+        legend: {
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            padding: 20
+          }
+        }
+      },
+      animation: {
+        duration: 1500,
+        easing: 'easeInOutQuart'
+      }
+    }
+  });
+}
+
+function updateForecastInfo(nextMonth, changePercentage, topProducts) {
+  try {
+    // Update next month forecast
+    document.getElementById('forecast-next-month').textContent = 
+      '฿' + nextMonth.toLocaleString('th-TH', {minimumFractionDigits: 2});
+    
+    // Update change percentage
+    const changeElement = document.getElementById('forecast-change');
+    const isPositive = changePercentage >= 0;
+    const changeText = isPositive ? 'เพิ่มขึ้น' : 'ลดลง';
+    const changeIcon = isPositive ? 'bi-arrow-up' : 'bi-arrow-down';
+    const changeClass = isPositive ? 'text-success' : 'text-danger';
+    
+    changeElement.innerHTML = 
+      `<i class="bi ${changeIcon}"></i> ${changeText} ${Math.abs(changePercentage).toFixed(1)}% จากเดือนนี้`;
+    changeElement.className = `text-muted ${changeClass}`;
+    
+    // Update top products list
+    const topProductsContainer = document.getElementById('forecast-top-products');
+    
+    if (!topProducts || topProducts.length === 0) {
+      topProductsContainer.innerHTML = 
+        '<div class="text-muted"><i class="bi bi-info-circle me-2"></i>ไม่มีข้อมูลสินค้าเพียงพอสำหรับการคาดการณ์</div>';
+      return;
+    }
+    
+    let html = '<div class="list-group list-group-flush">';
+    topProducts.forEach((product, index) => {
+      const rankIcon = index === 0 ? 'bi-trophy-fill text-warning' : 
+                      index === 1 ? 'bi-award-fill text-secondary' : 
+                      index === 2 ? 'bi-award text-warning' : 'bi-star';
+      
+      const growthBadge = product.growth_rate > 0 ? 
+        `<span class="badge bg-success ms-2">+${(product.growth_rate * 100).toFixed(0)}%</span>` :
+        product.growth_rate < 0 ? 
+        `<span class="badge bg-danger ms-2">${(product.growth_rate * 100).toFixed(0)}%</span>` :
+        '<span class="badge bg-secondary ms-2">ใหม่</span>';
+      
+      html += `
+        <div class="list-group-item bg-transparent border-0 px-0 py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <i class="bi ${rankIcon} me-2"></i>
+              <div>
+                <div class="fw-bold">${product.name}</div>
+                <small class="text-muted">${product.flavor}</small>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="small text-muted">${product.recent_quantity} ชิ้น/เดือน</div>
+              ${growthBadge}
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    
+    topProductsContainer.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error updating forecast info:', error);
+    document.getElementById('forecast-top-products').innerHTML = 
+      '<div class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i>เกิดข้อผิดพลาดในการแสดงข้อมูล</div>';
+  }
+}
+</script>
+{% endblock %}

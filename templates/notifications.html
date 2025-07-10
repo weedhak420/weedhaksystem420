@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="bi bi-bell me-2"></i>การแจ้งเตือน</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>กลับไปยังแดชบอร์ด</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if notifications %}
+        <div class="list-group">
+            {% for notification in notifications %}
+            <div class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">
+                        {% if notification.type == 'new_order' %}
+                        <i class="bi bi-cart-plus text-primary me-2"></i>
+                        {% elif notification.type == 'payment' %}
+                        <i class="bi bi-credit-card text-success me-2"></i>
+                        {% else %}
+                        <i class="bi bi-info-circle text-info me-2"></i>
+                        {% endif %}
+                        {{ notification.message }}
+                    </h5>
+                    <small class="text-muted">{{ notification.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                </div>
+                {% if notification.related_id %}
+                <div class="mt-2">
+                    <a href="{{ url_for('view_order', id=notification.related_id) }}" class="btn btn-sm btn-outline-primary">ดูรายละเอียด</a>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-bell-slash text-muted" style="font-size: 3rem;"></i>
+            <p class="mt-3">ไม่มีการแจ้งเตือนในขณะนี้</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

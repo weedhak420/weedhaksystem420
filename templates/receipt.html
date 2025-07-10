@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ใบเสร็จรับเงิน - คำสั่งซื้อ #{{ order.id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .receipt-container {
+            max-width: 800px;
+            margin: 30px auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .receipt-header {
+            background: #0066cc;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .receipt-body {
+            padding: 30px;
+        }
+        .company-info {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .company-logo {
+            max-width: 150px;
+            margin-bottom: 15px;
+        }
+        .company-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .company-details {
+            color: #666;
+        }
+        .receipt-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .receipt-number {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .receipt-date {
+            text-align: right;
+        }
+        .customer-details {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .customer-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .items-table th {
+            background-color: #f0f0f0;
+            padding: 10px;
+            text-align: left;
+        }
+        .items-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .items-table .text-end {
+            text-align: right;
+        }
+        .total-section {
+            margin-top: 20px;
+            text-align: right;
+        }
+        .total-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+        .total-label {
+            width: 150px;
+            text-align: right;
+            padding-right: 20px;
+            font-weight: 500;
+        }
+        .total-value {
+            width: 120px;
+            text-align: right;
+            font-weight: 600;
+        }
+        .grand-total {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0066cc;
+            border-top: 2px solid #0066cc;
+            padding-top: 10px;
+        }
+        .receipt-footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-top: 1px solid #eee;
+        }
+        .payment-status {
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .payment-status.paid {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .payment-status.unpaid {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .barcode {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .barcode img {
+            max-width: 250px;
+        }
+        .print-button {
+            margin-top: 20px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .print-button:hover {
+            background-color: #0055aa;
+        }
+        @media print {
+            body {
+                background-color: white;
+            }
+            .receipt-container {
+                box-shadow: none;
+                margin: 0;
+                max-width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="receipt-container">
+            <div class="receipt-header">
+                <h2><i class="bi bi-receipt me-2"></i>ใบเสร็จรับเงิน / ใบกำกับภาษีอย่างย่อ</h2>
+            </div>
+            
+            <div class="receipt-body">
+                <div class="company-info">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Marbo 9k Logo" class="company-logo" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22150%22%20height%3D%22150%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20150%20150%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22150%22%20height%3D%22150%22%20fill%3D%22%230066cc%22%3E%3C%2Frect%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20fill%3D%22%23fff%22%20dy%3D%22.3em%22%20style%3D%22text-anchor%3A%20middle%3B%20font-size%3A%2024px%3B%22%3EMarbo%209k%3C%2Ftext%3E%3C%2Fsvg%3E'">
+                    <div class="company-name">Marbo 9k Shop</div>
+                    <div class="company-details">
+                        123 ถนนสุขุมวิท, กรุงเทพฯ 10110<br>
+                        โทร: 099-999-9999 | อีเมล: info@marbo9k.com
+                    </div>
+                </div>
+                
+                <div class="receipt-details">
+                    <div class="receipt-number">
+                        <div>เลขที่ใบเสร็จ: INV-{{ '%05d' % order.id }}</div>
+                        <div>หมายเลขคำสั่งซื้อ: #{{ order.id }}</div>
+                    </div>
+                    <div class="receipt-date">
+                        <div>วันที่ออกใบเสร็จ: {{ order.payment_date.strftime('%d/%m/%Y') if order.payment_date else order.order_date.strftime('%d/%m/%Y') }}</div>
+                        <div>วันที่สั่งซื้อ: {{ order.order_date.strftime('%d/%m/%Y') }}</div>
+                    </div>
+                </div>
+                
+                <div class="customer-details">
+                    <h5 class="mb-3">ข้อมูลลูกค้า</h5>
+                    <div class="customer-name">{{ order.customer.name }}</div>
+                    <div>{{ order.customer.phone or '-' }}</div>
+                    <div>{{ order.shipping_address or order.customer.address or '-' }}</div>
+                </div>
+                
+                <h5 class="mb-3">รายการสินค้า</h5>
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="45%">รายการ</th>
+                            <th width="15%" class="text-end">ราคาต่อหน่วย</th>
+                            <th width="15%" class="text-end">จำนวน</th>
+                            <th width="20%" class="text-end">ราคารวม</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.order_items %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ item.product.name }} ({{ item.product.flavor }})</td>
+                            <td class="text-end">฿{{ '{:,.2f}'.format(item.price) }}</td>
+                            <td class="text-end">{{ item.quantity }}</td>
+                            <td class="text-end">฿{{ '{:,.2f}'.format(item.price * item.quantity) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <div class="total-section">
+                    <div class="total-row">
+                        <div class="total-label">ยอดรวม:</div>
+                        <div class="total-value">฿{{ '{:,.2f}'.format(order.total_amount) }}</div>
+                    </div>
+                    <div class="total-row">
+                        <div class="total-label">ภาษีมูลค่าเพิ่ม (7%):</div>
+                        <div class="total-value">฿{{ '{:,.2f}'.format(order.total_amount * 0.07) }}</div>
+                    </div>
+                    <div class="total-row grand-total">
+                        <div class="total-label">ยอดรวมทั้งสิ้น:</div>
+                        <div class="total-value">฿{{ '{:,.2f}'.format(order.total_amount) }}</div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <div class="payment-status {{ 'paid' if order.payment_status == 'paid' else 'unpaid' }}">
+                        <i class="bi {{ 'bi-check-circle-fill' if order.payment_status == 'paid' else 'bi-exclamation-circle-fill' }} me-2"></i>
+                        {{ 'ชำระเงินแล้ว' if order.payment_status == 'paid' else 'รอชำระเงิน' }}
+                    </div>
+                </div>
+                
+                <div class="barcode">
+                    <img src="{{ url_for('static', filename=order.qr_code_path) if order.qr_code_path else '' }}" alt="QR Code" onerror="this.style.display='none'">
+                </div>
+            </div>
+            
+            <div class="receipt-footer">
+                <p>ขอบคุณที่ใช้บริการ Marbo 9k Shop</p>
+                <button class="btn print-button no-print" onclick="window.print()">
+                    <i class="bi bi-printer me-2"></i>พิมพ์ใบเสร็จ
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

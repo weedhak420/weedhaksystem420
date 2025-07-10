@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">คำสั่งซื้อ #{{ order.id }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('main.generate_payment_qr', order_id=order.id) }}" class="btn btn-sm btn-primary" target="_blank">
+                <i class="bi bi-qr-code me-2"></i>QR Code ชำระเงิน
+            </a>
+            <a href="{{ url_for('main.receipt', order_id=order.id) }}" class="btn btn-sm btn-success" target="_blank">
+                <i class="bi bi-receipt me-2"></i>ใบเสร็จ
+            </a>
+        </div>
+        <a href="{{ url_for('main.orders') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>กลับไปยังคำสั่งซื้อ</a>
+    </div>
+</div>
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">{{ order.customer.name }}</h5>
+        <p><strong>วันที่:</strong> {{ order.order_date.strftime('%d/%m/%Y') }}</p>
+        <p><strong>ยอดรวม:</strong> ฿{{ '{:,.2f}'.format(order.total_amount) }}</p>
+        <p><strong>ที่อยู่จัดส่ง:</strong> {{ order.shipping_address or '-' }}</p>
+        <p><strong>หมายเหตุ:</strong> {{ order.notes or '-' }}</p>
+    </div>
+</div>
+<div class="card mb-4">
+    <div class="card-header"><i class="bi bi-table me-2"></i> รายการสินค้า</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-sm">
+                <thead><tr><th>สินค้า</th><th>จำนวน</th><th>ราคา</th><th>รวม</th></tr></thead>
+                <tbody>
+                    {% for item in order.order_items %}
+                    <tr>
+                        <td>{{ item.product.name }} ({{ item.product.flavor }})</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>฿{{ '{:,.2f}'.format(item.price) }}</td>
+                        <td>฿{{ '{:,.2f}'.format(item.price * item.quantity) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header"><i class="bi bi-credit-card me-2"></i> การชำระเงิน</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('main.update_payment', id=order.id) }}" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            {% if order.payment_slip %}
+            <p><strong>วันที่ชำระ:</strong> {{ order.payment_date.strftime('%d/%m/%Y %H:%M') }}</p>
+            <p><strong>สถานะ:</strong> <span class="badge bg-success">ชำระแล้ว</span></p>
+            <p><strong>สลิป:</strong> <a href="{{ url_for('static', filename=order.payment_slip) }}" target="_blank">ดูสลิป</a></p>
+            {% else %}
+            <p><strong>สถานะ:</strong> <span class="badge bg-warning">รอสลิป</span></p>
+            {% endif %}
+            <div class="mb-3">
+                <label for="payment_slip" class="form-label">อัปโหลดสลิปใหม่ (ถ้ามี)</label>
+                <input type="file" class="form-control" id="payment_slip" name="payment_slip" accept="image/*">
+            </div>
+            <button type="submit" class="btn btn-primary">บันทึก</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

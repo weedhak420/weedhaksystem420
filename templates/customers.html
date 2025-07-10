@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">จัดการลูกค้า</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('main.add_customer') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-circle me-2"></i>เพิ่มลูกค้าใหม่</a>
+    </div>
+</div>
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-sm">
+                <thead><tr><th>รหัส</th><th>ชื่อ</th><th>โทรศัพท์</th><th>ที่อยู่</th><th>Line ID</th><th>คำสั่งซื้อ</th><th></th></tr></thead>
+                <tbody>
+                    {% for customer in customers %}
+                    <tr>
+                        <td>{{ customer.id }}</td>
+                        <td>{{ customer.name }}</td>
+                        <td>{{ customer.phone or '-' }}</td>
+                        <td>{{ customer.address or '-' }}</td>
+                        <td>{{ customer.line_id or '-' }}</td>
+                        <td>{{ customer.orders|length }}</td>
+                        <td>
+                            <a href="{{ url_for('main.view_customer', id=customer.id) }}" class="btn btn-sm btn-outline-primary">ดู</a>
+                            <a href="{{ url_for('main.edit_customer', id=customer.id) }}" class="btn btn-sm btn-outline-secondary">แก้ไข</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center">ยังไม่มีลูกค้าในระบบ</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

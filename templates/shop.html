@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ shop_settings.hero_title }}</title>
+    {% if shop_settings.favicon_path %}
+    <link rel="icon" href="{{ url_for('static', filename=shop_settings.favicon_path) }}">
+    {% endif %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family={{ shop_settings.font_family|replace(' ', '+') }}:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: {{ shop_settings.primary_color }};
+            --secondary-color: {{ shop_settings.secondary_color }};
+            --accent-color: {{ shop_settings.accent_color }};
+            --light-bg: #f9fafb;
+            --dark-bg: #121212;
+            --text-color: {{ shop_settings.text_color }};
+            --light-text: #ffffff;
+            --border-radius: {{ shop_settings.border_radius }}px;
+            --transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        
+        body {
+            font-family: '{{ shop_settings.font_family }}', sans-serif;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        
+        /* === NAVBAR === */
+        .navbar {
+            background-color: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            transition: var(--transition);
+        }
+        
+        .navbar.scrolled {
+            padding: 8px 0;
+        }
+        
+        .navbar-brand {
+            color: var(--secondary-color) !important;
+            font-weight: 700;
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+            letter-spacing: -0.5px;
+        }
+        
+        .navbar-brand img {
+            max-height: 40px;
+            margin-right: 10px;
+        }
+        
+        .navbar-brand i {
+            margin-right: 10px;
+            color: var(--accent-color);
+            font-size: 1.4rem;
+        }
+        
+        /* === HERO SECTION === */
+        .hero-section {
+            background: {% if shop_settings.hero_background %}
+                url("{{ url_for('static', filename=shop_settings.hero_background) }}") center/cover no-repeat
+            {% else %}
+                linear-gradient(135deg, var(--primary-color), var(--secondary-color))
+            {% endif %};
+            padding: 120px 0 100px;
+            color: {{ shop_settings.hero_text_color }};
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            margin-bottom: 60px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 40%, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.2) 80%);
+            z-index: 1;
+        }
+        
+        .hero-section .container {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .hero-section h1 {
+            font-weight: 800;
+            margin-bottom: 20px;
+            font-size: 3.5rem;
+            letter-spacing: -1px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .hero-section p {
+            opacity: 0.95;
+            font-size: 1.3rem;
+            margin-bottom: 30px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            font-weight: 300;
+        }
+        
+        /* === PRODUCT CARDS === */
+        .product-card {
+            transition: var(--transition);
+            border: none;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background-color: #fff;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            height: 100%;
+            position: relative;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .product-img-wrapper {
+            position: relative;
+            overflow: hidden;
+            height: 240px;
+        }
+        
+        .product-card img {
+            height: 100%;
+            width: 100%;
+            object-fit: cover;
+            transition: transform 0.8s;
+        }
+        
+        .product-card:hover img {
+            transform: scale(1.08);
+        }
+        
+        .card-body {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .card-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background-color: var(--accent-color);
+            color: white;
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 5px 12px;
+            border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            z-index: 3;
+        }
+        
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+        }
+        
+        .card-subtitle {
+            color: #64748b;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+        
+        .card-text {
+            color: #64748b;
+            margin-bottom: 15px;
+            flex-grow: 1;
+        }
+        
+        .price-tag {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: baseline;
+        }
+        
+        .price-tag small {
+            font-size: 1rem;
+            opacity: 0.7;
+            margin-left: 3px;
+        }
+        
+        .stock-text {
+            color: #10b981;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        
+        .stock-text i {
+            margin-right: 5px;
+        }
+        
+        .out-of-stock {
+            color: #ef4444;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        
+        .out-of-stock i {
+            margin-right: 5px;
+        }
+        
+        /* === FORM ELEMENTS === */
+        .form-section {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+            margin-top: 60px;
+            margin-bottom: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .form-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 6px;
+            height: 100%;
+            background: var(--accent-color);
+        }
+        
+        .form-section h4 {
+            color: var(--secondary-color);
+            font-weight: 700;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            letter-spacing: -0.5px;
+            font-size: 1.6rem;
+        }
+        
+        .form-label {
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #4b5563;
+            font-size: 0.95rem;
+        }
+        
+        .form-control, .form-select {
+            padding: 14px 16px;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            font-size: 1rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+            transition: var(--transition);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.15);
+            border-color: var(--primary-color);
+        }
+        
+        .input-group-text {
+            background-color: #f8fafc;
+            border-color: rgba(0, 0, 0, 0.1);
+            padding: 0 15px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border: none;
+            padding: 14px 34px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            box-shadow: 0 10px 25px rgba(var(--primary-color-rgb), 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.6s;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(var(--secondary-color-rgb), 0.3);
+        }
+        
+        .btn-primary:hover::after {
+            left: 100%;
+        }
+        
+        .btn-primary i {
+            margin-right: 8px;
+        }
+        
+        /* === ALERTS === */
+        .alert {
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 5px solid;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+        
+        .alert-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-left-color: #10b981;
+        }
+        
+        .alert-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left-color: #ef4444;
+        }
+        
+        /* === QUANTITY SELECTOR === */
+        .quantity-selector {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .quantity-selector label {
+            margin-right: 12px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: #4b5563;
+            flex-shrink: 0;
+        }
+        
+        .quantity-selector select {
+            flex-grow: 1;
+        }
+        
+        .form-text {
+            color: #6b7280;
+            margin-top: 7px;
+            font-size: 0.85rem;
+        }
+        
+        /* === SECTION STYLING === */
+        .section-title {
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
+            padding-bottom: 20px;
+            font-weight: 800;
+            font-size: 2.2rem;
+            letter-spacing: -0.5px;
+            color: var(--secondary-color);
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background-color: var(--accent-color);
+            border-radius: 2px;
+        }
+        
+        .section-subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: -30px;
+        }
+        
+        /* === BANNER STYLING === */
+        .banner {
+            margin-bottom: 60px;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            position: relative;
+            transition: var(--transition);
+        }
+        
+        .banner:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .banner img {
+            width: 100%;
+            display: block;
+            transition: transform 0.5s;
+        }
+        
+        .banner:hover img {
+            transform: scale(1.03);
+        }
+        
+        /* === FOOTER === */
+        .footer {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 50px 0 40px;
+            margin-top: 80px;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 70% 80%, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.2) 80%);
+        }
+        
+        .footer .container {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .footer p {
+            margin-bottom: 0;
+            opacity: 0.9;
+            font-size: 1.05rem;
+        }
+        
+        .social-icons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .social-icons a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.15);
+            color: white;
+            transition: var(--transition);
+            font-size: 1.2rem;
+        }
+        
+        .social-icons a:hover {
+            background-color: var(--accent-color);
+            transform: translateY(-5px) scale(1.1);
+        }
+        
+        /* === PRODUCT GRID === */
+        .products-grid {
+            margin-bottom: 60px;
+        }
+        
+        /* === RESPONSIVE STYLES === */
+        @media (max-width: 991.98px) {
+            .hero-section {
+                padding: 80px 0 70px;
+            }
+            
+            .hero-section h1 {
+                font-size: 2.8rem;
+            }
+            
+            .hero-section p {
+                font-size: 1.1rem;
+            }
+            
+            .section-title {
+                font-size: 1.8rem;
+            }
+            
+            .form-section {
+                padding: 30px;
+            }
+        }
+        
+        @media (max-width: 767.98px) {
+            .hero-section {
+                padding: 60px 0 50px;
+                margin-bottom: 40px;
+            }
+            
+            .hero-section h1 {
+                font-size: 2.2rem;
+            }
+            
+            .product-img-wrapper {
+                height: 200px;
+            }
+            
+            .section-title {
+                margin-bottom: 30px;
+            }
+            
+            .banner {
+                margin-bottom: 40px;
+            }
+            
+            .form-section {
+                margin-top: 40px;
+                margin-bottom: 40px;
+            }
+        }
+        
+        /* === ANIMATIONS === */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .products-grid .col {
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+        
+        .products-grid .col:nth-child(1) { animation-delay: 0.1s; }
+        .products-grid .col:nth-child(2) { animation-delay: 0.2s; }
+        .products-grid .col:nth-child(3) { animation-delay: 0.3s; }
+        .products-grid .col:nth-child(4) { animation-delay: 0.4s; }
+        .products-grid .col:nth-child(5) { animation-delay: 0.5s; }
+        .products-grid .col:nth-child(6) { animation-delay: 0.6s; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                {% if shop_settings.navbar_logo_path %}
+                <img src="{{ url_for('static', filename=shop_settings.navbar_logo_path) }}" alt="Shop Logo">
+                {% else %}
+                <i class="bi bi-shop"></i>
+                {% endif %}
+                WEED 9k Shop
+            </a>
+        </div>
+    </nav>
+    
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="container text-center">
+            <h1>{{ shop_settings.hero_title }}</h1>
+            <p>{{ shop_settings.hero_subtitle }}</p>
+            {% if shop_settings.hero_button_text %}
+            <a href="#products" class="btn btn-primary">
+                <i class="bi bi-cart"></i> {{ shop_settings.hero_button_text }}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {% if category == 'success' %}
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                        {% else %}
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        {% endif %}
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- Top Banners -->
+        {% if top_banners %}
+            {% for banner in top_banners %}
+                <div class="banner">
+                    {% if banner.link %}
+                    <a href="{{ banner.link }}" target="_blank">
+                        <img src="{{ url_for('static', filename=banner.image_path) }}" alt="{{ banner.title }}" class="img-fluid">
+                    </a>
+                    {% else %}
+                    <img src="{{ url_for('static', filename=banner.image_path) }}" alt="{{ banner.title }}" class="img-fluid">
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <!-- Featured Products -->
+        {% if featured_products %}
+        <div class="mb-5">
+            <h2 class="section-title">{{ shop_settings.featured_title }}</h2>
+            {% if shop_settings.featured_subtitle %}
+            <p class="section-subtitle">{{ shop_settings.featured_subtitle }}</p>
+            {% endif %}
+            <div class="row row-cols-1 row-cols-md-3 g-4 products-grid">
+                {% for product in featured_products %}
+                <div class="col">
+                    <div class="card product-card h-100">
+                        {% if product.product.stock > 0 %}
+                        <div class="card-badge">สินค้าแนะนำ</div>
+                        {% endif %}
+                        <div class="product-img-wrapper">
+                            {% if product.product.image_path %}
+                            <img src="{{ url_for('static', filename=product.product.image_path) }}" class="card-img-top" alt="{{ product.product.name }} {{ product.product.flavor }}" 
+                            onerror="this.onerror=null; this.src='data:image/svg+xml;charset=UTF-8,%3Csvg width='100%' height='220' xmlns='http://www.w3.org/2000/svg' role='img' aria-label='Placeholder' preserveAspectRatio='xMidYMid slice' focusable='false'%3E%3Crect width='100%' height='100%' fill='%236c757d'%3E%3C/rect%3E%3Ctext x='50%' y='50%' fill='%23dee2e6' dy='.3em' text-anchor='middle'%3E{{ product.product.name }} {{ product.product.flavor }}%3C/text%3E%3C/svg%3E';">
+                            {% else %}
+                            <div class="h-100 d-flex align-items-center justify-content-center bg-light">
+                                <i class="bi bi-image text-secondary" style="font-size: 3rem;"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ product.product.flavor }}</h5>
+                            <p class="card-subtitle">{{ product.product.name }}</p>
+                            <div class="price-tag">฿{{ '{:,.0f}'.format(product.product.price) }}<small>.00</small></div>
+                            <p class="card-text">
+                                {% if product.product.stock > 0 %}
+                                <span class="stock-text"><i class="bi bi-check-circle-fill"></i> มีสินค้าพร้อมส่ง ({{ product.product.stock }} ชิ้น)</span>
+                                {% else %}
+                                <span class="out-of-stock"><i class="bi bi-x-circle-fill"></i> สินค้าหมด</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Middle Banners -->
+        {% if middle_banners %}
+            {% for banner in middle_banners %}
+                <div class="banner">
+                    {% if banner.link %}
+                    <a href="{{ banner.link }}" target="_blank">
+                        <img src="{{ url_for('static', filename=banner.image_path) }}" alt="{{ banner.title }}" class="img-fluid">
+                    </a>
+                    {% else %}
+                    <img src="{{ url_for('static', filename=banner.image_path) }}" alt="{{ banner.title }}" class="img-fluid">
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('main.add_order') }}" enctype="multipart/form-data" id="products">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <!-- รายการสินค้า -->
+            <h2 class="section-title">สินค้าทั้งหมด</h2>
+            <div class="row row-cols-1 row-cols-md-3 g-4 mb-5 products-grid" id="product-list">
+                <!-- Products will be loaded here by JavaScript -->
+            </div>
+
+            <!-- Bottom Banners -->
+            {% if bottom_banners %}
+                {% for banner in bottom_banners %}
+                    <div class="banner">
+                        {% if banner.link %}
+                        <a href="{{ banner.link }}" target="_blank">
+                            <img src="{{ url_for('static', filename=banner.image_path) }}" alt="{{ banner.title }}" class="img-fluid">
+                        </a>
+                        {% else %}
+                        <img src="{{ url_for('static', filename=banner.image_path) }}" alt="{{ banner.title }}" class="img-fluid">
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- ฟอร์มข้อมูลลูกค้า -->
+            <div class="form-section">
+                <h4 class="mb-4"><i class="bi bi-person-fill me-2"></i>ข้อมูลการสั่งซื้อ</h4>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="customer_name" class="form-label">ชื่อลูกค้า <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" class="form-control" id="customer_name" name="customer_name" placeholder="กรุณากรอกชื่อ-นามสกุล" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="customer_phone" class="form-label">เบอร์โทรศัพท์ <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                            <input type="tel" class="form-control" id="customer_phone" name="customer_phone" placeholder="กรุณากรอกเบอร์โทรศัพท์" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="shipping_address" class="form-label">ที่อยู่จัดส่ง <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-house"></i></span>
+                        <textarea class="form-control" id="shipping_address" name="shipping_address" rows="3" placeholder="กรุณากรอกที่อยู่จัดส่งโดยละเอียด" required></textarea>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="postal_code" class="form-label">รหัสไปรษณีย์ <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-mailbox"></i></span>
+                        <input type="text" class="form-control" id="postal_code" name="postal_code" placeholder="กรุณากรอกรหัสไปรษณีย์" required>
+                        </div>
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">อีเมล</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="กรุณากรอกอีเมล (ถ้ามี)">
+                    </div>
+                    <div class="form-text">ใช้สำหรับส่งข้อมูลการติดตามพัสดุ</div>
+                </div>
+                <div class="mb-3">
+                    <label for="customer_note" class="form-label">หมายเหตุ</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-sticky"></i></span>
+                        <textarea class="form-control" id="customer_note" name="customer_note" rows="2" placeholder="หมายเหตุหรือข้อความเพิ่มเติม (ถ้ามี)"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- การชำระเงิน -->
+            <div class="form-section">
+                <h4 class="mb-4"><i class="bi bi-credit-card-fill me-2"></i>วิธีการชำระเงิน</h4>
+                <div class="mb-4">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="payment_method" id="payment_method_cod" value="cod" checked>
+                        <label class="form-check-label fw-bold" for="payment_method_cod">
+                            <i class="bi bi-cash-coin me-2"></i>เก็บเงินปลายทาง (COD)
+                        </label>
+                        <div class="form-text ms-4">ชำระเงินเมื่อได้รับสินค้า (มีค่าธรรมเนียมเพิ่ม 20 บาท)</div>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="payment_method" id="payment_method_transfer" value="transfer">
+                        <label class="form-check-label fw-bold" for="payment_method_transfer">
+                            <i class="bi bi-bank me-2"></i>โอนเงินผ่านธนาคาร
+                        </label>
+                        <div class="form-text ms-4">โอนเงินและแจ้งการชำระเงินผ่านช่องทางที่ระบุ</div>
+                    </div>
+                </div>
+                
+                <div id="bank_transfer_section" class="mb-4 p-3 rounded border" style="display: none;">
+                    <p class="fw-bold mb-2">บัญชีสำหรับโอนเงิน:</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-bank2 me-2 fs-4"></i>
+                                <div>
+                                    <div class="fw-bold">ธนาคารกสิกรไทย</div>
+                                    <div>ชื่อบัญชี: บริษัท มาโบ จำกัด</div>
+                                    <div>เลขที่บัญชี: 123-4-56789-0</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-bank2 me-2 fs-4"></i>
+                                <div>
+                                    <div class="fw-bold">ธนาคารไทยพาณิชย์</div>
+                                    <div>ชื่อบัญชี: บริษัท มาโบ จำกัด</div>
+                                    <div>เลขที่บัญชี: 987-6-54321-0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="payment_slip" class="form-label">อัพโหลดสลิปการโอนเงิน</label>
+                        <input type="file" class="form-control" id="payment_slip" name="payment_slip">
+                        <div class="form-text">รองรับไฟล์ภาพ JPG, PNG (ไม่เกิน 2MB)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- การจัดส่ง -->
+            <div class="form-section">
+                <h4 class="mb-4"><i class="bi bi-truck me-2"></i>วิธีการจัดส่ง</h4>
+                <div class="mb-3">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="shipping_method" id="shipping_method_standard" value="standard" checked>
+                        <label class="form-check-label fw-bold" for="shipping_method_standard">
+                            <i class="bi bi-box-seam me-2"></i>จัดส่งมาตรฐาน
+                        </label>
+                        <div class="form-text ms-4">จัดส่งโดย Kerry Express หรือ Flash Express (ค่าจัดส่ง 50 บาท)</div>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="shipping_method" id="shipping_method_express" value="express">
+                        <label class="form-check-label fw-bold" for="shipping_method_express">
+                            <i class="bi bi-truck me-2"></i>จัดส่งด่วนพิเศษ
+                        </label>
+                        <div class="form-text ms-4">จัดส่งด่วนภายใน 24 ชั่วโมง (เฉพาะพื้นที่กรุงเทพฯ และปริมณฑล, ค่าจัดส่ง 100 บาท)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ยืนยันคำสั่งซื้อ -->
+            <div class="form-section">
+                <h4 class="mb-4"><i class="bi bi-bag-check-fill me-2"></i>ยืนยันคำสั่งซื้อ</h4>
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="terms_agreement" name="terms_agreement" required>
+                    <label class="form-check-label" for="terms_agreement">
+                        ข้าพเจ้าได้อ่านและยอมรับ <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">เงื่อนไขและข้อตกลง</a> ในการสั่งซื้อสินค้า
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-cart-check-fill"></i> ยืนยันคำสั่งซื้อ
+                </button>
+            </div>
+        </form>
+    </div>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="container text-center">
+        <p>© 2025 WEED 9k Shop - บริษัท WEED 9K จำกัด</p>
+        <p>เลขที่ผู้เสียภาษีอากร 0-87-56789-00-0</p>
+        <div class="social-icons">
+            <a href="#" target="_blank"><i class="bi bi-facebook"></i></a>
+            <a href="#" target="_blank"><i class="bi bi-line"></i></a>
+            <a href="#" target="_blank"><i class="bi bi-instagram"></i></a>
+            <a href="#" target="_blank"><i class="bi bi-tiktok"></i></a>
+        </div>
+    </div>
+</footer>
+
+<!-- Terms Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="termsModalLabel">เงื่อนไขและข้อตกลงในการสั่งซื้อสินค้า</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. การสั่งซื้อสินค้า</h6>
+                <p>ลูกค้าสามารถสั่งซื้อสินค้าผ่านทางเว็บไซต์นี้ได้ตลอด 24 ชั่วโมง ทางบริษัทจะดำเนินการจัดส่งสินค้าตามลำดับการสั่งซื้อ</p>
+                
+                <h6>2. การชำระเงิน</h6>
+                <p>ลูกค้าสามารถเลือกชำระเงินได้ 2 ช่องทางคือ โอนเงินผ่านบัญชีธนาคาร หรือเก็บเงินปลายทาง (มีค่าธรรมเนียมเพิ่มเติม)</p>
+                
+                <h6>3. การจัดส่งสินค้า</h6>
+                <p>บริษัทจะดำเนินการจัดส่งสินค้าภายใน 1-3 วันทำการหลังจากที่ได้รับการยืนยันการชำระเงิน หรือหลังจากยืนยันคำสั่งซื้อกรณีเก็บเงินปลายทาง</p>
+                
+                <h6>4. การคืนสินค้าและการรับประกัน</h6>
+                <p>ลูกค้าสามารถตรวจสอบสภาพสินค้าเบื้องต้นได้ก่อนชำระเงินกรณีเก็บเงินปลายทาง หากพบว่าสินค้าชำรุดหรือได้รับความเสียหายจากการขนส่ง สามารถปฏิเสธการรับสินค้าได้ทันที</p>
+                
+                <h6>5. ข้อมูลส่วนบุคคล</h6>
+                <p>บริษัทจะเก็บรักษาข้อมูลส่วนบุคคลของลูกค้าไว้เป็นความลับ และจะไม่นำไปเผยแพร่หรือส่งต่อให้บุคคลที่สามโดยไม่ได้รับอนุญาต</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">เข้าใจแล้ว</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Navbar scroll effect
+    window.addEventListener('scroll', function() {
+        const navbar = document.querySelector('.navbar');
+        if (window.scrollY > 50) {
+            navbar.classList.add('scrolled');
+        } else {
+            navbar.classList.remove('scrolled');
+        }
+    });
+    
+    // Payment method toggle
+    const paymentMethodTransfer = document.getElementById('payment_method_transfer');
+    const paymentMethodCod = document.getElementById('payment_method_cod');
+    const bankTransferSection = document.getElementById('bank_transfer_section');
+    
+    paymentMethodTransfer.addEventListener('change', function() {
+        if (this.checked) {
+            bankTransferSection.style.display = 'block';
+        }
+    });
+    
+    paymentMethodCod.addEventListener('change', function() {
+        if (this.checked) {
+            bankTransferSection.style.display = 'none';
+        }
+    });
+
+    const productListDiv = document.getElementById('product-list');
+
+    async function fetchPublicStockData() {
+        try {
+            const response = await fetch('/api/public_stock_data');
+            const data = await response.json();
+
+            if (data.error) {
+                productListDiv.innerHTML = `<div class="col-12 text-center text-danger">${data.error}</div>`;
+                return;
+            }
+
+            let html = '';
+            if (data.products.length === 0) {
+                html = `<div class="col-12 text-center text-muted">ไม่มีสินค้าในระบบ</div>`;
+            } else {
+                data.products.forEach(product => {
+                    let stockStatusHtml = '';
+                    if (product.stock > 0) {
+                        stockStatusHtml = `<span class="stock-text"><i class="bi bi-check-circle-fill"></i> มีสินค้าพร้อมส่ง (${product.stock} ชิ้น)</span>`;
+                    } else {
+                        stockStatusHtml = `<span class="out-of-stock"><i class="bi bi-x-circle-fill"></i> สินค้าหมด</span>`;
+                    }
+
+                    const imageUrl = product.image_path ? `/static/${product.image_path}` : 'data:image/svg+xml;charset=UTF-8,%3Csvg width=\'100%\' height=\'220\' xmlns=\'http://www.w3.org/2000/svg\' role=\'img\' aria-label=\'Placeholder\' preserveAspectRatio=\'xMidYMid slice\' focusable=\'false\'%3E%3Crect width=\'100%\' height=\'100%\' fill=\'%236c757d\'%3E%3C/rect%3E%3Ctext x=\'50%\' y=\'50%\' fill=\'%23dee2e6\' dy=\'.3em\' text-anchor=\'middle\'%3E${product.name} ${product.flavor}%3C/text%3E%3C/svg%3E';
+
+                    html += `
+                        <div class="col">
+                            <div class="card product-card h-100">
+                                <div class="product-img-wrapper">
+                                    <img src="${imageUrl}" class="card-img-top" alt="${product.name} ${product.flavor}" onerror="this.onerror=null; this.src='data:image/svg+xml;charset=UTF-8,%3Csvg width=\'100%\' height=\'220\' xmlns=\'http://www.w3.org/2000/svg\' role=\'img\' aria-label=\'Placeholder\' preserveAspectRatio=\'xMidYMid slice\' focusable=\'false\'%3E%3Crect width=\'100%\' height=\'100%\' fill=\'%236c757d\'%3E%3C/rect%3E%3Ctext x=\'50%\' y=\'50%\' fill=\'%23dee2e6\' dy=\'.3em\' text-anchor=\'middle\'%3E${product.name} ${product.flavor}%3C/text%3E%3C/svg%3E';">
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title">${product.flavor}</h5>
+                                    <p class="card-subtitle">${product.name}</p>
+                                    <div class="price-tag">฿${product.price.toFixed(2)}<small>.00</small></div>
+                                    <p class="card-text">
+                                        ${stockStatusHtml}
+                                    </p>
+                                    <div class="quantity-selector">
+                                        <label for="quantity-${product.id}">จำนวน:</label>
+                                        <select class="form-select" id="quantity-${product.id}" name="quantity[]" required>
+                                            <option value="0" selected>0</option>
+                                            ${product.stock > 0 ? [...Array(product.stock).keys()].map(i => `<option value="${i + 1}">${i + 1}</option>`).join('') : '<option value="0" disabled>สินค้าหมด</option>'}
+                                        </select>
+                                        <input type="hidden" name="product_id[]" value="${product.id}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            productListDiv.innerHTML = html;
+
+        } catch (error) {
+            console.error('Error fetching public stock data:', error);
+            productListDiv.innerHTML = `<div class="col-12 text-center text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูลสต็อก</div>`;
+        }
+    }
+
+    // Initial fetch
+    fetchPublicStockData();
+
+    // Refresh data every 10 seconds
+    setInterval(fetchPublicStockData, 10000);
+</script>
+</body>
+</html>

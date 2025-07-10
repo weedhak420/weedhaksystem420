@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+{% block page_title %}การวิเคราะห์ลูกค้า{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">การวิเคราะห์ลูกค้า</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('main.reports') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>กลับไปยังรายงาน
+        </a>
+        <button type="button" class="btn btn-sm btn-success ms-2" onclick="exportToExcel()">
+            <i class="bi bi-file-earmark-excel me-2"></i>ส่งออก Excel
+        </button>
+    </div>
+</div>
+
+<!-- Loading Indicator -->
+<div id="loadingIndicator" class="text-center py-4">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">กำลังโหลด...</span>
+    </div>
+    <p class="mt-2">กำลังโหลดข้อมูลการวิเคราะห์ลูกค้า...</p>
+</div>
+
+<!-- Main Content -->
+<div id="mainContent" style="display: none;">
+    <!-- Customer Distribution Chart -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">การแบ่งประเภทลูกค้า</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="customerDistributionChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">ความถี่ในการซื้อ</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="purchaseFrequencyChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Customers -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">ลูกค้าที่ซื้อมากที่สุด</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="topCustomersTable">
+                            <thead>
+                                <tr>
+                                    <th>ชื่อลูกค้า</th>
+                                    <th class="text-end">จำนวนคำสั่งซื้อ</th>
+                                    <th class="text-end">ยอดซื้อรวม</th>
+                                    <th class="text-end">ซื้อครั้งล่าสุด</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topCustomersBody">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">ลูกค้าที่ไม่ได้ซื้อนาน</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="inactiveCustomersTable">
+                            <thead>
+                                <tr>
+                                    <th>ชื่อลูกค้า</th>
+                                    <th class="text-end">ยอดซื้อรวม</th>
+                                    <th class="text-end">ซื้อครั้งล่าสุด</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inactiveCustomersBody">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Insights -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">ข้อมูลเชิงลึกเกี่ยวกับลูกค้า</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="customerInsights">
+                        <!-- Insights will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Message -->
+<div id="errorMessage" class="alert alert-danger" style="display: none;">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <span id="errorText">เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาลองใหม่อีกครั้ง</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+let customerData = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadCustomerAnalysis();
+});
+
+async function loadCustomerAnalysis() {
+    try {
+        const response = await fetch('/api/customer_analysis');
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        
+        customerData = await response.json();
+        displayCustomerAnalysis();
+        
+    } catch (error) {
+        console.error('Error fetching customer analysis:', error);
+        showError('ไม่สามารถโหลดข้อมูลการวิเคราะห์ลูกค้าได้');
+    }
+}
+
+function displayCustomerAnalysis() {
+    document.getElementById('loadingIndicator').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+    
+    // Customer Distribution Chart
+    const distributionCtx = document.getElementById('customerDistributionChart').getContext('2d');
+    new Chart(distributionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['ลูกค้าประจำ', 'ลูกค้าทั่วไป', 'ลูกค้าใหม่', 'ลูกค้าไม่ได้ซื้อนาน'],
+            datasets: [{
+                data: customerData.customer_distribution,
+                backgroundColor: ['#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? ((context.raw / total) * 100).toFixed(1) : 0;
+                            return context.label + ': ' + context.raw + ' คน (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Purchase Frequency Chart
+    const frequencyCtx = document.getElementById('purchaseFrequencyChart').getContext('2d');
+    new Chart(frequencyCtx, {
+        type: 'bar',
+        data: {
+            labels: ['1 ครั้ง', '2-3 ครั้ง', '4-6 ครั้ง', '7-12 ครั้ง', 'มากกว่า 12 ครั้ง'],
+            datasets: [{
+                label: 'จำนวนลูกค้า',
+                data: customerData.purchase_frequency,
+                backgroundColor: '#4e73df',
+                borderColor: '#4e73df',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'จำนวนลูกค้า: ' + context.raw + ' คน';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Top Customers Table
+    const topCustomersBody = document.getElementById('topCustomersBody');
+    topCustomersBody.innerHTML = '';
+    customerData.top_customers.forEach(customer => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${customer.name}</td>
+            <td class="text-end">${customer.order_count}</td>
+            <td class="text-end">฿${customer.total_spent.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            <td class="text-end">${customer.last_order_date ? new Date(customer.last_order_date).toLocaleDateString('th-TH') : 'ไม่ระบุ'}</td>
+        `;
+        topCustomersBody.appendChild(row);
+    });
+    
+    // Inactive Customers Table
+    const inactiveCustomersBody = document.getElementById('inactiveCustomersBody');
+    inactiveCustomersBody.innerHTML = '';
+    customerData.inactive_customers.forEach(customer => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${customer.name}</td>
+            <td class="text-end">฿${customer.total_spent.toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            <td class="text-end">${customer.last_order_date ? new Date(customer.last_order_date).toLocaleDateString('th-TH') : 'ไม่ระบุ'}</td>
+        `;
+        inactiveCustomersBody.appendChild(row);
+    });
+    
+    // Customer Insights
+    const insights = document.getElementById('customerInsights');
+    const totalCustomers = customerData.customer_distribution.reduce((a, b) => a + b, 0);
+    const activeCustomers = customerData.customer_distribution[0] + customerData.customer_distribution[1] + customerData.customer_distribution[2];
+    const avgSpending = customerData.top_customers.length > 0 ? 
+        customerData.top_customers.reduce((sum, c) => sum + c.total_spent, 0) / customerData.top_customers.length : 0;
+    
+    insights.innerHTML = `
+        <div class="col-md-3">
+            <div class="text-center">
+                <h4 class="text-primary">${totalCustomers}</h4>
+                <p class="mb-0">ลูกค้าทั้งหมด</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="text-center">
+                <h4 class="text-success">${activeCustomers}</h4>
+                <p class="mb-0">ลูกค้าที่ยังซื้อ</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="text-center">
+                <h4 class="text-info">฿${avgSpending.toLocaleString('th-TH', {minimumFractionDigits: 2})}</h4>
+                <p class="mb-0">ยอดซื้อเฉลี่ย</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="text-center">
+                <h4 class="text-warning">${((activeCustomers / totalCustomers) * 100).toFixed(1)}%</h4>
+                <p class="mb-0">อัตราลูกค้าที่ยังซื้อ</p>
+            </div>
+        </div>
+    `;
+}
+
+function showError(message) {
+    document.getElementById('loadingIndicator').style.display = 'none';
+    document.getElementById('errorText').textContent = message;
+    document.getElementById('errorMessage').style.display = 'block';
+}
+
+function exportToExcel() {
+    if (!customerData) {
+        alert('ไม่มีข้อมูลสำหรับส่งออก');
+        return;
+    }
+    
+    const wb = XLSX.utils.book_new();
+    
+    // Export top customers
+    const topCustomersTable = document.getElementById('topCustomersTable');
+    const topWs = XLSX.utils.table_to_sheet(topCustomersTable);
+    XLSX.utils.book_append_sheet(wb, topWs, "ลูกค้าที่ซื้อมากที่สุด");
+    
+    // Export inactive customers
+    const inactiveTable = document.getElementById('inactiveCustomersTable');
+    const inactiveWs = XLSX.utils.table_to_sheet(inactiveTable);
+    XLSX.utils.book_append_sheet(wb, inactiveWs, "ลูกค้าที่ไม่ได้ซื้อนาน");
+    
+    // Save file
+    const filename = `การวิเคราะห์ลูกค้า_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+}
+</script>
+{% endblock %}

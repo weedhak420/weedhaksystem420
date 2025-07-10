@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+
+{% block title %}ประวัติการเพิ่มสต็อก - Marbo 9K System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .history-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+    }
+    
+    .history-header {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .quantity-positive {
+        color: #28a745;
+        font-weight: bold;
+    }
+    
+    .quantity-negative {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    
+    .table th {
+        background-color: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        padding: 12px;
+    }
+    
+    .table td {
+        padding: 12px;
+        vertical-align: middle;
+    }
+    
+    .badge-entry-type {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .entry-add {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .entry-remove {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .stats-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="bi bi-clock-history me-2"></i>
+            ประวัติการเพิ่มสต็อก
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{{ url_for('main.inventory') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>กลับไปยังสต็อกสินค้า
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="stats-summary">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="stat-item">
+                    <span class="stat-number">{{ history|length }}</span>
+                    <span class="stat-label">รายการทั้งหมด</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    {% set total_added = history|selectattr('quantity', 'gt', 0)|map(attribute='quantity')|sum %}
+                    <span class="stat-number">{{ total_added }}</span>
+                    <span class="stat-label">เพิ่มสต็อกรวม</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    {% set total_removed = history|selectattr('quantity', 'lt', 0)|map(attribute='quantity')|sum %}
+                    <span class="stat-number">{{ total_removed|abs }}</span>
+                    <span class="stat-label">ลดสต็อกรวม</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item">
+                    {% set unique_products = history|map(attribute='product_id')|unique|list|length %}
+                    <span class="stat-number">{{ unique_products }}</span>
+                    <span class="stat-label">สินค้าที่เกี่ยวข้อง</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Table -->
+    <div class="history-card">
+        <div class="history-header">
+            <h5 class="mb-0">รายการเปลี่ยนแปลงสต็อก</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th width="80">รหัส</th>
+                        <th>สินค้า</th>
+                        <th width="100">ประเภท</th>
+                        <th width="100">จำนวน</th>
+                        <th width="150">วันที่/เวลา</th>
+                        <th width="120">ผู้ดำเนินการ</th>
+                        <th>หมายเหตุ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in history %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-secondary">#{{ entry.id }}</span>
+                        </td>
+                        <td>
+                            <div>
+                                <strong>{{ entry.product.name }}</strong>
+                                <br>
+                                <small class="text-muted">{{ entry.product.flavor }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            {% if entry.quantity > 0 %}
+                            <span class="badge badge-entry-type entry-add">
+                                <i class="bi bi-plus-circle me-1"></i>เพิ่ม
+                            </span>
+                            {% else %}
+                            <span class="badge badge-entry-type entry-remove">
+                                <i class="bi bi-dash-circle me-1"></i>ลด
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.quantity > 0 %}
+                            <span class="quantity-positive">+{{ entry.quantity }}</span>
+                            {% else %}
+                            <span class="quantity-negative">{{ entry.quantity }}</span>
+                            {% endif %}
+                            <small class="text-muted d-block">ชิ้น</small>
+                        </td>
+                        <td>
+                            <div>{{ entry.date.strftime('%d/%m/%Y') }}</div>
+                            <small class="text-muted">{{ entry.date.strftime('%H:%M:%S') }}</small>
+                        </td>
+                        <td>
+                            {% if entry.user %}
+                            <span class="badge bg-info">{{ entry.user.username }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">ระบบ</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if entry.notes %}
+                            <span class="text-muted">{{ entry.notes }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="text-muted">
+                                <i class="bi bi-clock-history fs-1 d-block mb-3"></i>
+                                <h5>ยังไม่มีประวัติการเปลี่ยนแปลงสต็อก</h5>
+                                <p>เมื่อมีการเพิ่มหรือลดสต็อกสินค้า ประวัติจะแสดงที่นี่</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination and pagination.pages > 1 %}
+    <nav aria-label="History pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('main.inventory_history', page=pagination.prev_num) }}">
+                    <i class="bi bi-chevron-left"></i> ก่อนหน้า
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for page_num in pagination.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != pagination.page %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.inventory_history', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                    {% endif %}
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">…</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('main.inventory_history', page=pagination.next_num) }}">
+                    ถัดไป <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-plus-circle text-success me-2"></i>
+                        การดำเนินการด่วน
+                    </h6>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('main.add_inventory') }}" class="btn btn-success">
+                            <i class="bi bi-plus-circle me-2"></i>เพิ่มสต็อกสินค้า
+                        </a>
+                        <a href="{{ url_for('main.add_inventory_barcode') }}" class="btn btn-primary">
+                            <i class="bi bi-upc-scan me-2"></i>สแกนบาร์โค้ดเพิ่มสต็อก
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-info-circle text-info me-2"></i>
+                        ข้อมูลเพิ่มเติม
+                    </h6>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            ประวัติจะบันทึกทุกการเปลี่ยนแปลง
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-person text-info me-2"></i>
+                            แสดงผู้ดำเนินการทุกรายการ
+                        </li>
+                        <li class="mb-0">
+                            <i class="bi bi-clock text-warning me-2"></i>
+                            บันทึกเวลาที่แน่นอน
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add any additional JavaScript functionality here if needed
+    console.log('Inventory history page loaded');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">เพิ่มคำสั่งซื้อ</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('main.orders') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>กลับไปยังคำสั่งซื้อ</a>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column;">
+    <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">กำลังโหลด...</span>
+    </div>
+    <div class="text-light mt-3">กำลังบันทึกคำสั่งซื้อและอัพเดทข้อมูลใน Google Sheets...</div>
+    <div class="text-light mt-2">กรุณารอสักครู่</div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data" id="orderForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="mb-3">
+                <label for="customer_id" class="form-label">ลูกค้า</label>
+                <select class="form-select" id="customer_id" name="customer_id" required>
+                    <option value="">เลือกลูกค้า</option>
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}">{{ customer.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="shipping_address" class="form-label">ที่อยู่จัดส่ง</label>
+                <textarea class="form-control" id="shipping_address" name="shipping_address" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">รายการสินค้า</label>
+                <div id="order-items">
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <select class="form-select" name="product_id[]" required>
+                                <option value="">เลือกสินค้า</option>
+                                {% for product in products %}
+                                <option value="{{ product.id }}">{{ product.name }} ({{ product.flavor }}) - ฿{{ '{:,.2f}'.format(product.price) }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="number" class="form-control" name="quantity[]" min="1" placeholder="จำนวน" required>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-outline-danger w-100 remove-item"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-outline-primary mt-2" id="add-item"><i class="bi bi-plus-circle me-2"></i>เพิ่มรายการ</button>
+            </div>
+            <div class="mb-3">
+                <label for="payment_slip" class="form-label">สลิปการชำระเงิน</label>
+                <input type="file" class="form-control" id="payment_slip" name="payment_slip" accept="image/*">
+                <div class="form-text">อัปโหลดสลิปการชำระเงิน (ถ้ามี)</div>
+            </div>
+            <div class="mb-3">
+                <label for="notes" class="form-label">หมายเหตุ</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">บันทึกคำสั่งซื้อ</button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Function to add new item row
+document.getElementById('add-item').addEventListener('click', function() {
+    const container = document.getElementById('order-items');
+    const newItem = document.createElement('div');
+    newItem.className = 'row mb-2';
+    newItem.innerHTML = `
+        <div class="col-md-6">
+            <select class="form-select" name="product_id[]" required>
+                <option value="">เลือกสินค้า</option>
+                {% for product in products %}
+                <option value="{{ product.id }}">{{ product.name }} ({{ product.flavor }}) - ฿{{ '{:,.2f}'.format(product.price) }} (คงเหลือ: {{ product.stock }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <input type="number" class="form-control" name="quantity[]" min="1" placeholder="จำนวน" required>
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-outline-danger w-100 remove-item"><i class="bi bi-trash"></i></button>
+        </div>
+    `;
+    container.appendChild(newItem);
+});
+
+// Function to remove item row
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-item') || e.target.closest('.remove-item')) {
+        const row = e.target.closest('.row');
+        if (document.querySelectorAll('#order-items .row').length > 1) {
+            row.remove();
+        } else {
+            alert('ต้องมีรายการสินค้าอย่างน้อย 1 รายการ');
+        }
+    }
+});
+
+// Form validation and loading
+document.getElementById('orderForm').addEventListener('submit', function(e) {
+    // Validate form
+    const customerSelect = document.getElementById('customer_id');
+    if (!customerSelect.value) {
+        alert('กรุณาเลือกลูกค้า');
+        e.preventDefault();
+        return false;
+    }
+
+    // Check if at least one product is selected
+    const productSelects = document.querySelectorAll('select[name="product_id[]"]');
+    const quantityInputs = document.querySelectorAll('input[name="quantity[]"]');
+    let hasValidItem = false;
+
+    for (let i = 0; i < productSelects.length; i++) {
+        if (productSelects[i].value && quantityInputs[i].value && parseInt(quantityInputs[i].value) > 0) {
+            hasValidItem = true;
+            break;
+        }
+    }
+
+    if (!hasValidItem) {
+        alert('กรุณาเลือกสินค้าและระบุจำนวนอย่างน้อย 1 รายการ');
+        e.preventDefault();
+        return false;
+    }
+
+    // Show loading overlay
+    document.getElementById('loading-overlay').style.display = 'flex';
+    
+    // Disable form to prevent double submission
+    const submitButton = this.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>กำลังบันทึก...';
+    
+    return true;
+});
+
+// Hide loading on page load (in case of back button)
+window.addEventListener('load', function() {
+    document.getElementById('loading-overlay').style.display = 'none';
+});
+</script>
+{% endblock %}

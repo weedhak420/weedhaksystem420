@@ -1,0 +1,15 @@
+Flask
+Flask-SQLAlchemy
+PyMySQL
+pandas
+matplotlib
+qrcode
+waitress
+openpyxl
+xlsxwriter
+python-dotenv
+Flask-WTF
+google-api-python-client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2

@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">คำสั่งซื้อ</h1>
+  <div class="btn-toolbar mb-2 mb-md-0">
+      <a href="{{ url_for('main.add_order') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-circle me-2"></i>เพิ่มคำสั่งซื้อ</a>
+  </div>
+</div>
+
+<!-- Loading Overlay for Delete Operations -->
+<div id="deleteLoadingOverlay" class="loading-overlay d-none">
+    <div class="loading-content">
+        <div class="spinner-border text-danger mb-3" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 class="text-danger">กำลังลบคำสั่งซื้อ...</h5>
+        <p class="text-muted mb-2">กำลังคืนสินค้าเข้าสต็อกและอัพเดท Google Sheets</p>
+        <div class="progress" style="width: 300px;">
+            <div class="progress-bar bg-danger progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+        </div>
+        <small class="text-muted mt-2 d-block">กรุณารอสักครู่...</small>
+    </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+      <div class="table-responsive">
+          <table class="table table-striped table-sm">
+              <thead>
+                <tr>
+                  <th>รหัส</th>
+                  <th>ลูกค้า</th>
+                  <th>วันที่</th>
+                  <th>ยอดรวม</th>
+                  <th>สลิป</th>
+                  <th>การจัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                  {% for order in orders %}
+                  <tr>
+                      <td>{{ order.id }}</td>
+                      <td>{{ order.customer.name }}</td>
+                      <td>{{ order.order_date.strftime('%d/%m/%Y') }}</td>
+                      <td>฿{{ '{:,.2f}'.format(order.total_amount) }}</td>
+                      <td>
+                          {% if order.payment_slip %}
+                          <span class="badge bg-success">มีสลิป</span>
+                          {% else %}
+                          <span class="badge bg-warning">รอสลิป</span>
+                          {% endif %}
+                      </td>
+                      <td>
+                        <div class="btn-group">
+                          <a href="{{ url_for('main.view_order', id=order.id) }}" class="btn btn-sm btn-outline-primary">ดู</a>
+                          <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteOrderModal{{ order.id }}">ลบ</button>
+                        </div>
+                      </td>
+                  </tr>
+                  {% else %}
+                  <tr><td colspan="6" class="text-center">ยังไม่มีคำสั่งซื้อ</td></tr>
+                  {% endfor %}
+              </tbody>
+          </table>
+      </div>
+  </div>
+</div>
+
+<!-- Delete Modals -->
+{% for order in orders %}
+<div class="modal fade" id="deleteOrderModal{{ order.id }}" tabindex="-1" aria-labelledby="deleteOrderModalLabel{{ order.id }}" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteOrderModalLabel{{ order.id }}">ยืนยันการลบคำสั่งซื้อ</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>คุณแน่ใจหรือไม่ที่ต้องการลบคำสั่งซื้อ #{{ order.id }}?</p>
+        <div class="alert alert-warning">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <strong>คำเตือน:</strong> การลบคำสั่งซื้อจะคืนสินค้ากลับเข้าสต็อก และไม่สามารถกู้คืนได้
+        </div>
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>รายการสินค้าที่จะคืนเข้าสต็อก:</strong>
+          <ul class="mb-0 mt-2">
+            {% for item in order.order_items %}
+            <li>{{ item.product.name }} {{ item.product.flavor }} - จำนวน {{ item.quantity }} ชิ้น</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        <form action="{{ url_for('main.delete_order', id=order.id) }}" method="POST" style="display: inline;" class="delete-order-form" data-order-id="{{ order.id }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger delete-order-btn">
+            <i class="bi bi-trash me-2"></i>ลบคำสั่งซื้อ
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<style>
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    width: 90%;
+}
+
+.progress {
+    height: 8px;
+    margin: 1rem auto;
+}
+
+.loading-overlay.show {
+    display: flex !important;
+}
+
+.delete-order-btn.loading {
+    pointer-events: none;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteLoadingOverlay = document.getElementById('deleteLoadingOverlay');
+    const deleteOrderForms = document.querySelectorAll('.delete-order-form');
+    
+    deleteOrderForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const orderId = this.dataset.orderId;
+            const deleteBtn = this.querySelector('.delete-order-btn');
+            
+            // Show loading overlay
+            deleteLoadingOverlay.classList.remove('d-none');
+            deleteLoadingOverlay.classList.add('show');
+            
+            // Update button state
+            deleteBtn.classList.add('loading');
+            deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>กำลังลบ...';
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById(`deleteOrderModal${orderId}`));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Simulate progress bar animation
+            const progressBar = document.querySelector('#deleteLoadingOverlay .progress-bar');
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 12;
+                if (progress > 85) progress = 85;
+                progressBar.style.width = progress + '%';
+            }, 300);
+            
+            // Clear interval and complete progress after some time
+            setTimeout(() => {
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+            }, 2500);
+            
+            // If there's an error, hide loading overlay after timeout
+            setTimeout(() => {
+                // This will be overridden by page redirect on success
+                if (document.querySelector('.alert-danger')) {
+                    deleteLoadingOverlay.classList.add('d-none');
+                    deleteLoadingOverlay.classList.remove('show');
+                    deleteBtn.classList.remove('loading');
+                    deleteBtn.innerHTML = '<i class="bi bi-trash me-2"></i>ลบคำสั่งซื้อ';
+                }
+            }, 8000);
+        });
+    });
+
+    // Handle page unload to hide loading if user navigates away
+    window.addEventListener('beforeunload', function() {
+        deleteLoadingOverlay.classList.add('d-none');
+        deleteLoadingOverlay.classList.remove('show');
+    });
+
+    // Hide loading overlay when page loads (in case of back navigation)
+    window.addEventListener('pageshow', function() {
+        deleteLoadingOverlay.classList.add('d-none');
+        deleteLoadingOverlay.classList.remove('show');
+    });
+});
+</script>
+{% endblock %}

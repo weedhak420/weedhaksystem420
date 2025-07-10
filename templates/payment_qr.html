@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code ชำระเงิน - คำสั่งซื้อ #{{ order.id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .payment-container {
+            max-width: 600px;
+            margin: 30px auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .payment-header {
+            background: #0066cc;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .payment-body {
+            padding: 30px;
+        }
+        .qr-container {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+        .qr-code {
+            max-width: 250px;
+            margin: 0 auto;
+        }
+        .order-details {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .detail-label {
+            font-weight: 500;
+            color: #666;
+        }
+        .detail-value {
+            font-weight: 600;
+            text-align: right;
+        }
+        .total-amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0066cc;
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f0f7ff;
+            border-radius: 5px;
+        }
+        .payment-footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-top: 1px solid #eee;
+        }
+        .btn-upload {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn-upload:hover {
+            background-color: #0055aa;
+            transform: translateY(-2px);
+        }
+        .timer {
+            font-size: 18px;
+            font-weight: 600;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+        .instructions {
+            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 5px 5px 0;
+        }
+        .instructions h5 {
+            color: #ff8f00;
+            margin-bottom: 10px;
+        }
+        .instructions ol {
+            margin-bottom: 0;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="payment-container">
+            <div class="payment-header">
+                <h2><i class="bi bi-qr-code me-2"></i>QR Code ชำระเงิน</h2>
+                <p class="mb-0">คำสั่งซื้อ #{{ order.id }}</p>
+            </div>
+            
+            <div class="payment-body">
+                <div class="timer text-center" id="countdown">
+                    กรุณาชำระเงินภายใน <span id="time">15:00</span> นาที
+                </div>
+                
+                <div class="instructions">
+                    <h5><i class="bi bi-info-circle me-2"></i>วิธีการชำระเงิน</h5>
+                    <ol>
+                        <li>เปิดแอปธนาคารของคุณ</li>
+                        <li>เลือกฟังก์ชัน "สแกน QR Code"</li>
+                        <li>สแกน QR Code ด้านล่าง</li>
+                        <li>ตรวจสอบจำนวนเงินให้ถูกต้อง</li>
+                        <li>ยืนยันการชำระเงิน</li>
+                        <li>อัปโหลดสลิปการชำระเงิน</li>
+                    </ol>
+                </div>
+                
+                <div class="total-amount">
+                    ยอดชำระ: ฿{{ '{:,.2f}'.format(order.total_amount) }}
+                </div>
+                
+                <div class="qr-container">
+                    <div class="position-relative">
+                        <img src="{{ qr_code }}" alt="QR Code สำหรับชำระเงิน" class="qr-code img-fluid">
+                        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" id="qr-overlay" style="background-color: rgba(255,255,255,0.8); display: none;">
+                            <div class="text-center">
+                                <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                                <h4 class="mt-2">ชำระเงินสำเร็จ</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mt-3 text-muted">สแกนเพื่อชำระเงิน</p>
+                    <div class="d-flex justify-content-center mt-2">
+                        <button class="btn btn-sm btn-outline-secondary me-2" onclick="copyPromptPay()">
+                            <i class="bi bi-clipboard me-1"></i>คัดลอก PromptPay ID
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="downloadQR()">
+                            <i class="bi bi-download me-1"></i>บันทึก QR Code
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="order-details">
+                    <h5 class="mb-3">รายละเอียดคำสั่งซื้อ</h5>
+                    
+                    <div class="detail-row">
+                        <div class="detail-label">หมายเลขคำสั่งซื้อ</div>
+                        <div class="detail-value">#{{ order.id }}</div>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <div class="detail-label">วันที่สั่งซื้อ</div>
+                        <div class="detail-value">{{ order.order_date.strftime('%d/%m/%Y %H:%M') }}</div>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <div class="detail-label">ชื่อลูกค้า</div>
+                        <div class="detail-value">{{ order.customer.name }}</div>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <div class="detail-label">จำนวนสินค้า</div>
+                        <div class="detail-value">{{ order.item_count }} รายการ</div>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <div class="detail-label">ยอดรวม</div>
+                        <div class="detail-value">฿{{ '{:,.2f}'.format(order.total_amount) }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="payment-footer">
+                <a href="{{ url_for('main.upload_slip_and_location', id=order.id) }}" class="btn btn-upload">
+                    <i class="bi bi-upload me-2"></i>อัปโหลดสลิปการชำระเงิน
+                </a>
+                <p class="mt-3 mb-0 text-muted">หากมีข้อสงสัย กรุณาติดต่อ 099-999-9999</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Countdown timer
+        function startTimer(duration, display) {
+            var timer = duration, minutes, seconds;
+            setInterval(function () {
+                minutes = parseInt(timer / 60, 10);
+                seconds = parseInt(timer % 60, 10);
+                
+                minutes = minutes < 10 ? "0" + minutes : minutes;
+                seconds = seconds < 10 ? "0" + seconds : seconds;
+                
+                display.textContent = minutes + ":" + seconds;
+                
+                if (--timer < 0) {
+                    timer = 0;
+                    document.getElementById('countdown').innerHTML = '<span class="text-danger">หมดเวลาชำระเงิน</span>';
+                }
+            }, 1000);
+        }
+        
+        window.onload = function () {
+            var fifteenMinutes = 60 * 15,
+                display = document.querySelector('#time');
+            startTimer(fifteenMinutes, display);
+        
+            // เพิ่มการตรวจสอบสถานะการชำระเงินทุก 30 วินาที
+            setInterval(checkPaymentStatus, 30000);
+        };
+        
+        // ฟังก์ชันตรวจสอบสถานะการชำระเงิน
+        function checkPaymentStatus() {
+            fetch('/api/check_payment_status/{{ order.id }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'paid') {
+                        // ถ้าชำระเงินแล้ว ให้แสดงข้อความและเปลี่ยนเส้นทาง
+                        document.getElementById('payment-status-container').innerHTML = `
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle-fill me-2"></i>การชำระเงินสำเร็จแล้ว
+                            </div>
+                            <div class="text-center">
+                                <a href="{{ url_for('main.receipt', order_id=order.id) }}" class="btn btn-success">
+                                    <i class="bi bi-receipt me-2"></i>ดูใบเสร็จ
+                                </a>
+                            </div>
+                        `;
+                        
+                        // หยุดการตรวจสอบ
+                        clearInterval(checkPaymentStatus);
+                        
+                        // เปลี่ยนเส้นทางหลังจาก 3 วินาที
+                        setTimeout(() => {
+                            window.location.href = "{{ url_for('main.receipt', order_id=order.id) }}";
+                        }, 3000);
+                    }
+                })
+                .catch(error => console.error('Error checking payment status:', error));
+        }
+    
+        // ฟังก์ชันคัดลอก PromptPay ID
+        function copyPromptPay() {
+            // สมมติว่ามี PromptPay ID
+            const promptpay = "0999999999"; // แทนที่ด้วย PromptPay ID จริง
+            navigator.clipboard.writeText(promptpay)
+                .then(() => {
+                    alert("คัดลอก PromptPay ID แล้ว");
+                })
+                .catch(err => {
+                    console.error('ไม่สามารถคัดลอกได้: ', err);
+                });
+        }
+        
+        // ฟังก์ชันดาวน์โหลด QR Code
+        function downloadQR() {
+            const link = document.createElement('a');
+            link.href = "{{ qr_code }}";
+            link.download = "payment_qr_{{ order.id }}.png";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+
+    <!-- เพิ่ม container สำหรับแสดงสถานะการชำระเงิน -->
+    <div id="payment-status-container" class="mt-3"></div>
+</body>
+</html>

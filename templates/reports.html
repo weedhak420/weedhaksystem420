@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+  <h1 class="h2">รายงาน</h1>
+</div>
+<div class="row">
+  <div class="col-md-4 mb-4">
+      <div class="card h-100">
+          <div class="card-header"><i class="bi bi-cash-stack me-2"></i> รายงานยอดขาย</div>
+          <div class="card-body">
+              <p>ดูยอดขายและกำไรตามช่วงเวลา</p>
+              <a href="{{ url_for('main.sales_report') }}" class="btn btn-primary">ดูรายงาน</a>
+          </div>
+      </div>
+  </div>
+  <div class="col-md-4 mb-4">
+      <div class="card h-100">
+          <div class="card-header"><i class="bi bi-box-seam me-2"></i> รายงานสินค้า</div>
+          <div class="card-body">
+              <p>ดูข้อมูลการขายตามสินค้า</p>
+              <a href="{{ url_for('main.product_report') }}" class="btn btn-primary">ดูรายงาน</a>
+          </div>
+      </div>
+  </div>
+  <div class="col-md-4 mb-4">
+      <div class="card h-100">
+          <div class="card-header"><i class="bi bi-graph-up me-2"></i> วิเคราะห์ต้นทุนและกำไร</div>
+          <div class="card-body">
+              <p>ดูการวิเคราะห์ต้นทุนและกำไรของสินค้า</p>
+              <a href="{{ url_for('main.profit_analysis') }}" class="btn btn-primary">ดูรายงาน</a>
+          </div>
+      </div>
+  </div>
+  <div class="col-md-4 mb-4">
+      <div class="card h-100">
+          <div class="card-header"><i class="bi bi-people me-2"></i> วิเคราะห์ลูกค้า</div>
+          <div class="card-body">
+              <p>ดูการวิเคราะห์พฤติกรรมและการแบ่งกลุ่มลูกค้า</p>
+              <a href="{{ url_for('main.customer_analysis') }}" class="btn btn-primary">ดูรายงาน</a>
+          </div>
+      </div>
+  </div>
+  <div class="col-md-4 mb-4">
+      <div class="card h-100">
+          <div class="card-header"><i class="bi bi-graph-up-arrow me-2"></i> แนวโน้มยอดขาย</div>
+          <div class="card-body">
+              <p>ดูแนวโน้มยอดขายและการคาดการณ์</p>
+              <a href="{{ url_for('main.sales_trend') }}" class="btn btn-primary">ดูรายงาน</a>
+          </div>
+      </div>
+  </div>
+  {% if session.get('role') == 'admin' %}
+  <div class="col-md-4 mb-4">
+      <div class="card h-100">
+          <div class="card-header"><i class="bi bi-activity me-2"></i> บันทึกกิจกรรม</div>
+          <div class="card-body">
+              <p>ดูประวัติการใช้งานระบบของผู้ใช้</p>
+              <a href="{{ url_for('main.activity_logs') }}" class="btn btn-primary">ดูรายงาน</a>
+          </div>
+      </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
